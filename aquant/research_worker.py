@@ -17,11 +17,20 @@ def cycle(data_root, out_root, sample_size, replay_days=0):
     from .core import read_config
     from .data import CSVData
     from .rolling import update_rolling
-    synced=sync_baostock(data_root,sample_size=sample_size)
+    now=dt.datetime.now(TZ)
+    completed=now.date() if now.hour>=20 else now.date()-dt.timedelta(days=1)
+    synced=sync_baostock(data_root,end=completed.isoformat(),sample_size=sample_size)
     data=CSVData(synced['dataset'])
     result=update_rolling(data,read_config('configs/research-real.json'),synced['asof'],out_root,
                           replay_days=replay_days,count=24,max_seconds=1200)
-    return {'sync':synced,'rolling':result}
+    from .paper import update, render
+    from .mailer import deliver
+    prediction=json.loads(Path(result['latest_predictions']).read_text())
+    paper=update(data,read_config('configs/research-real.json'),prediction,Path(out_root).parent/'paper')
+    mail=deliver('paper-'+paper['asof'], '[模拟] AQuant Lab '+paper['asof'], render(paper), Path(out_root).parent/'mail.sqlite')
+    summary={'sync':synced,'rolling':result,'paper':paper,'mail':mail}
+    write_json(Path(out_root)/'cycle.json',summary)
+    return summary
 
 
 def main():

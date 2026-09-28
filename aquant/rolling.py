@@ -92,7 +92,7 @@ def update_rolling(data, cfg, asof, directory, replay_days=0, count=24, seed=17,
             feature_dates = sorted(d for d in features if d <= asof)
             dates = feature_dates[-(replay_days + 1):] if replay_days else [asof]
             created = []
-            today = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).date().isoformat()
+            from .paper import prospective
             for date in dates:
                 check()
                 dest = predictions_dir / (date + '.json')
@@ -100,7 +100,7 @@ def update_rolling(data, cfg, asof, directory, replay_days=0, count=24, seed=17,
                 model = fit_and_predict(features, labels, date, count, seed)
                 model.update(target=cfg['prediction_target'], mode=cfg['mode'],
                              created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
-                             provenance='prospective' if date == today and date == asof else 'historical_replay')
+                             provenance='prospective' if date == asof and prospective(date, data.next_day(date), dt.datetime.now(dt.timezone.utc)) else 'historical_replay')
                 write_json(dest, model); created.append(date)
             score_existing()  # Mature replay labels may be evaluated, still explicitly historical replay.
             evaluated = [json.loads(p.read_text(encoding='utf-8')) for p in sorted(evaluations_dir.glob('*.json'))]

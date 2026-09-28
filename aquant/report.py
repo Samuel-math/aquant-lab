@@ -62,6 +62,10 @@ def save_report(report, directory):
 
 
 def send_mail(report, state_path):
+    return send_text_mail(report["report_id"], ("[DEMO] " if report["mode"] == "demo" else "") + "A股信号 " + report["date"], markdown(report), state_path)
+
+
+def send_text_mail(report_id, subject, body, state_path):
     required = ("SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "MAIL_FROM", "MAIL_TO")
     if any(not os.environ.get(k) for k in required):
         raise ValidationError("请通过环境变量配置 SMTP_HOST/PORT/USER/PASSWORD 和 MAIL_FROM/TO")
@@ -69,7 +73,7 @@ def send_mail(report, state_path):
     db = sqlite3.connect(str(state_path))
     db.execute("CREATE TABLE IF NOT EXISTS deliveries (id TEXT PRIMARY KEY, status TEXT)")
     # Reserve before sending: ambiguous SMTP failure must be reviewed, never blindly retried.
-    key = digest([report["report_id"], os.environ["MAIL_TO"]])
+    key = digest([report_id, os.environ["MAIL_TO"]])
     try:
         db.execute("INSERT INTO deliveries VALUES (?, 'pending')", (key,)); db.commit()
     except sqlite3.IntegrityError:
@@ -79,9 +83,9 @@ def send_mail(report, state_path):
         return "该报告已发送，未重复发送"
     message = EmailMessage()
     message["From"] = os.environ["MAIL_FROM"]; message["To"] = os.environ["MAIL_TO"]
-    message["Subject"] = ("[DEMO] " if report["mode"] == "demo" else "") + "A股信号 " + report["date"]
+    message["Subject"] = subject
     message["Message-ID"] = "<%s@aquant.local>" % key
-    message.set_content(markdown(report))
+    message.set_content(body)
     try:
         with smtplib.SMTP_SSL(os.environ["SMTP_HOST"], int(os.environ["SMTP_PORT"]), context=ssl.create_default_context(), timeout=30) as smtp:
             smtp.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
