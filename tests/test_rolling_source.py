@@ -7,11 +7,24 @@ from aquant.core import read_config, ValidationError
 from aquant.data import CSVData, generate_demo
 from aquant.mining import prepare
 from aquant.rolling import fit_and_predict, validate_prediction, update_rolling
-from aquant.baostock_source import extract_1000, merge_revision, main_board
+from aquant.baostock_source import extract_1000, merge_revision, main_board, load_pool
 from aquant.storage import admission
 
 
 class RollingSourceTests(unittest.TestCase):
+    def test_explicit_pool_rejects_future_duplicate_and_non_main_board(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'pool.json'
+            pool={'asof':'2026-09-28','stocks':[{'code':c} for c in ['sh.600000','sz.000001','sz.002001']]}
+            path.write_text(json.dumps(pool))
+            self.assertEqual(load_pool(path,3,'2026-09-28')[0],pool)
+            with self.assertRaises(ValidationError): load_pool(path,3,'2026-09-27')
+            with self.assertRaises(ValidationError): load_pool(path,4,'2026-09-28')
+            for invalid in ['sh.600000','sh.688001']:
+                pool['stocks'][2]['code']=invalid
+                path.write_text(json.dumps(pool))
+                with self.assertRaises(ValidationError): load_pool(path,3,'2026-09-28')
+
     @classmethod
     def setUpClass(cls):
         cls.tmp=tempfile.TemporaryDirectory()

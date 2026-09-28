@@ -107,12 +107,23 @@ def normalized(cache, dates):
     return rows,quotes
 
 
-def sync_baostock(root, start='2025-01-02', end=None, sample_size=24, seed=17):
+def load_pool(path, sample_size, end):
+    pool=json.loads(Path(path).read_text(encoding='utf-8'))
+    codes=[s['code'] for s in pool['stocks']]
+    if len(codes)!=sample_size or len(set(codes))!=sample_size or any(not main_board(c) for c in codes):
+        raise ValidationError('指定股票池数量、唯一性或主板范围非法')
+    if pool['asof']>end:
+        raise ValidationError('股票池选择日期晚于信号日期，禁止未来名单回填')
+    return pool, digest(pool)
+
+
+def sync_baostock(root, start='2025-01-02', end=None, sample_size=24, seed=17, pool_path=None):
     # Optional dependency is imported only when explicitly pulling real data.
     import baostock as bs
     end=end or dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).date().isoformat()
     if start>end or not 3<=sample_size<=200:
         raise ValidationError('数据范围或股票样本数量非法（3..200）')
+    pool,pool_hash=load_pool(pool_path,sample_size,end) if pool_path else (None,None)
     root=Path(root); root.mkdir(parents=True,exist_ok=True)
     with lock(root/'sync.lock'):
         status(root/'sync.status.json',end,'running')
@@ -132,10 +143,12 @@ def sync_baostock(root, start='2025-01-02', end=None, sample_size=24, seed=17):
                 universe=json.loads(manifest_path.read_text(encoding='utf-8'))
                 if universe['start']!=start or universe['seed']!=seed or universe['sample_size']!=sample_size:
                     raise ValidationError('固定股票池参数变化，请使用新数据目录，禁止悄悄替换历史样本')
+                if universe.get('pool_hash')!=pool_hash:
+                    raise ValidationError('股票池内容改变，请建立独立数据目录及试验')
             else:
-                historical=collect(bs.query_all_stock(day=trading[0]))
-                codes=sorted(r['code'] for r in historical if main_board(r['code']))
-                random.Random(seed).shuffle(codes)
+                historical=collect(bs.query_all_stock(day=trading[0])) if not pool else []
+                codes=[s['code'] for s in pool['stocks']] if pool else sorted(r['code'] for r in historical if main_board(r['code']))
+                if not pool: random.Random(seed).shuffle(codes)
                 selected=[]
                 for code in codes:
                     basic_rows=collect(bs.query_stock_basic(code=code))
@@ -149,6 +162,9 @@ def sync_baostock(root, start='2025-01-02', end=None, sample_size=24, seed=17):
                 universe={'start':start,'seed':seed,'sample_size':sample_size,'selection_date':trading[0],
                           'selection':'seeded sample of historical main-board list, not return-selected; not full market',
                           'stocks':selected}
+                if pool:
+                    universe.update(pool_hash=pool_hash,pool_version=pool['version'],selection_date=pool['asof'],
+                                    selection='explicit research pool; historical data for training only; prospective evaluation after selection')
                 write_json(manifest_path,universe)
             raw_dir=root/'core'; raw_dir.mkdir(exist_ok=True)
             fetched_at=dt.datetime.now(dt.timezone.utc).isoformat()
@@ -204,7 +220,7 @@ def sync_baostock(root, start='2025-01-02', end=None, sample_size=24, seed=17):
                       'fetched_at':fetched_at,'universe':universe,'expected_symbols':expected_symbols,
                       'execution_observation':'unadjusted close of 30-minute bar ending at 10:00+08:00',
                       'volume_window_minutes':30,'storage_policy':'retain daily and 10:00 only; revision journal; no full intraday archive',
-                      'limitations':['固定历史股票池随机样本，非全市场','名称来自证券基本信息，不作为历史预测特征',
+                      'limitations':[('指定研究底池；选池日前数据仅用于训练，不构成无偏回测' if pool else '固定历史股票池随机样本，非全市场'),'名称来自证券基本信息，不作为历史预测特征',
                                      '前30分钟成交量不是一分钟成交量；撮合仅使用每分钟均量近似',
                                      '分红送转持仓核算仍未实现，收益标签跨除权日期会保留异常状态',
                                      '涨跌停价为普通主板规则推导，异常特殊交易状态需另行审计']}

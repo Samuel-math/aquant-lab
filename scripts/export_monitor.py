@@ -6,6 +6,12 @@ import json
 from pathlib import Path
 
 root=Path('/root/autodl-tmp/aquant')
+pointer=root/'active-monitor-root.txt'
+if pointer.exists():
+    active=Path(pointer.read_text().strip()).resolve()
+    if root.resolve() not in active.parents:
+        raise ValueError('Active trial must be under aquant data root')
+    root=active
 files={'paper':'paper/latest.json','protocol':'paper/protocol.json','cycle':'rolling-real/cycle.json',
        'scheduler':'rolling-real/scheduler.json','rolling':'rolling-real/status.json','sync':'real/sync.status.json'}
 result={'exported_at':dt.datetime.now(dt.timezone.utc).isoformat(),'files':{}}

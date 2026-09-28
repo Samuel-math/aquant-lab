@@ -16,6 +16,13 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(r['kind'],'report'); self.assertIn('&lt;script&gt;',r['html'])
         self.assertNotIn('<script>',r['html'])
 
+    def test_distinct_trials_have_distinct_delivery_keys(self):
+        old=assess(self.snapshot,self.now)
+        self.paper['trial_id']='pool188-v21-20260929'
+        new=assess(self.snapshot,self.now)
+        self.assertNotEqual(old['key'],new['key'])
+        self.assertIn('pool188-v21-20260929',new['html'])
+
     def test_late_notification_is_review_only(self):
         now=self.now.replace(hour=10)
         self.snapshot['files']['scheduler']['checked_at']=now.isoformat()

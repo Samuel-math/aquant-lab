@@ -31,6 +31,10 @@ def update(data, cfg, prediction, directory, now=None):
 def _update(data, cfg, prediction, root, now):
     asof = prediction['signal_date']; execution = data.next_day(asof)
     data.validate_mode(cfg)
+    if cfg.get('pool_hash'):
+        universe=data.metadata.get('universe',{})
+        if universe.get('pool_hash')!=cfg['pool_hash'] or asof<universe.get('selection_date','9999'):
+            raise ValidationError('股票池与模拟配置不符或信号早于选池日')
     manifest_path = root/'protocol.json'
     if not manifest_path.exists():
         if not prospective(asof, execution, now):
@@ -92,13 +96,13 @@ def _update(data, cfg, prediction, root, now):
         peak = cfg['initial_cash']; drawdown = 0
         for row in history:
             peak=max(peak,row['equity']); drawdown=min(drawdown,row['equity']/peak-1)
-        result = {'mode':'paper','asof':asof,'start':protocol['start'],'end_exclusive':protocol['end_exclusive'],
+        result = {'mode':'paper','trial_id':cfg.get('trial_id','legacy24'),'asof':asof,'start':protocol['start'],'end_exclusive':protocol['end_exclusive'],
                   'status':'complete' if asof >= protocol['end_exclusive'] else ('observing' if history else 'awaiting_first_execution'),
                   'equity':round(equity,2),'cash':round(account.cash,2),'total_return':equity/cfg['initial_cash']-1,
                   'max_drawdown':drawdown,'fees_paid':round(sum(t['fee'] for r in history for t in r['fills']),2),
                   'trade_count':sum(len(r['fills']) for r in history),'positions':account.positions,'next_plan':plan,
                   'missing_plan_dates':[r['date'] for r in history if r['plan_missing']],
-                  'limitations':['24只历史主板样本，不是全市场','10:00近似撮合，盘后核算，不代表实盘成交','费用为假设配置；公司行动暂停核算','短期结果不证明策略有效；现金基准收益为0']}
+                  'limitations':[cfg.get('universe_description','24只历史主板样本，不是全市场'),'10:00近似撮合，盘后核算，不代表实盘成交','费用为假设配置；公司行动暂停核算','短期结果不证明策略有效；现金基准收益为0']}
         write_json(root/'latest.json',result)
         text = render(result)
         (root/'latest.md').write_text(text,encoding='utf-8')

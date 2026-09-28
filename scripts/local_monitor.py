@@ -40,11 +40,12 @@ def assess(snapshot,now):
         subject='[巡检异常] AQuant Lab'
     else:
         kind='report'; plan=p.get('next_plan')
-        key='paper-'+p['asof']+'-'+p['status']
+        key='paper-'+p.get('trial_id','legacy24')+'-'+p['asof']+'-'+p['status']
         subject='[模拟日报] AQuant Lab '+p['asof']
         body='仅为1万元模拟观察，不是实盘成交或收益承诺。\n行情日期：'+p['asof']+'\n'
         body+='净值 %.2f 元；现金 %.2f 元；累计收益 %.2f%%；最大回撤 %.2f%%；费用 %.2f 元；成交 %d 笔。\n' % (p['equity'],p['cash'],100*p['total_return'],100*p['max_drawdown'],p['fees_paid'],p['trade_count'])
         body+='观察期：'+p['start']+' 至 '+p['end_exclusive']+'（不含结束日）。\n'
+        body+='试验：'+p.get('trial_id','legacy24')+'；以本试验新计划为准，旧试验计划不再执行。\n'
         if plan:
             deadline=dt.datetime.fromisoformat(plan['execution_date']+'T09:30:00+08:00')
             body+='\n'+('下次模拟计划' if now<deadline else '以下计划已过通知截止时间，仅供复盘，不可追单')+'：'+plan['execution_date']+' 10:00（北京时间）\n'

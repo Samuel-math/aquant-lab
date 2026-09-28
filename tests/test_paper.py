@@ -50,6 +50,16 @@ class PaperTests(unittest.TestCase):
         cfg=copy.deepcopy(self.cfg); cfg['initial_cash']=20000
         with self.assertRaises(ValidationError): update(self.data,cfg,self.pred,self.out,self.now)
 
+    def test_selected_pool_requires_matching_data_and_selection_date(self):
+        self.cfg['pool_hash']='frozen-pool'
+        with self.assertRaises(ValidationError): update(self.data,self.cfg,self.pred,self.out,self.now)
+        self.data.metadata['universe']={'pool_hash':'frozen-pool','selection_date':self.next}
+        with self.assertRaises(ValidationError): update(self.data,self.cfg,self.pred,self.out,self.now)
+        self.data.metadata['universe']['selection_date']=self.date
+        self.cfg['trial_id']='new-pool'
+        r=update(self.data,self.cfg,self.pred,self.out,self.now)
+        self.assertEqual(r['trial_id'],'new-pool')
+
     def test_replay_cannot_trade(self):
         self.pred['provenance']='historical_replay'
         with self.assertRaises(ValidationError): update(self.data,self.cfg,self.pred,self.out,self.now)
