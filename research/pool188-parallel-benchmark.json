@@ -1,0 +1,29 @@
+{
+  "asof": "2026-09-28",
+  "universe_count": 188,
+  "serial": {
+    "workers": 1,
+    "prepare_seconds": 82.018,
+    "fit_seconds": 9.74,
+    "total_seconds": 91.758,
+    "cpu_seconds": 91.759,
+    "feature_label_hash": "91da91d3fd6a469992dfe8e10489c9c57f64b71b3eded155de53129f5899cd4c",
+    "model_hash": "7a822d3d0d6dd0e1634dd7170a868c0560826cfb8527515dbb5e566420f49934",
+    "prediction_count": 188
+  },
+  "parallel": {
+    "workers": 24,
+    "prepare_seconds": 4.109,
+    "fit_seconds": 1.424,
+    "total_seconds": 5.533,
+    "cpu_seconds": 106.221,
+    "feature_label_hash": "91da91d3fd6a469992dfe8e10489c9c57f64b71b3eded155de53129f5899cd4c",
+    "model_hash": "7a822d3d0d6dd0e1634dd7170a868c0560826cfb8527515dbb5e566420f49934",
+    "prediction_count": 188
+  },
+  "exact_equivalence": true,
+  "speedup": 16.58,
+  "code_hash": "7b4fcb6f8db6ef95c91bc71e0f38731a7ba81c2e2a1d2c346235cb481d173f59",
+  "source_commit": "e1f2dc73160130908c72ce4e744a73cdb2ecb4b5",
+  "note": "Compares cached serial versus parallel computation on identical 188-stock data; no API time, no backtest performance claim."
+}

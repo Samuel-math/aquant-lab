@@ -1,0 +1,58 @@
+{
+  "audited_at": "2026-09-29T02:34:40.730392+08:00",
+  "trial_id": "pool188-v21-20260929",
+  "checks_passed": true,
+  "symbols": 188,
+  "prediction_count": 188,
+  "data_asof": "2026-09-28",
+  "start": "2026-09-29",
+  "end_exclusive": "2026-10-29",
+  "plan_frozen_at": "2026-09-29T02:34:19.799041+08:00",
+  "initial_cash": 10000,
+  "orders": [
+    {
+      "side": "BUY",
+      "symbol": "002245.SZ",
+      "name": "蔚蓝锂芯",
+      "qty": 100,
+      "reference_price": 16.24,
+      "estimated_fee": 5.02,
+      "reason": "综合因子排名 2",
+      "conditional_on_sells": false
+    },
+    {
+      "side": "BUY",
+      "symbol": "601595.SH",
+      "name": "上海电影",
+      "qty": 100,
+      "reference_price": 22.74,
+      "estimated_fee": 5.02,
+      "reason": "综合因子排名 4",
+      "conditional_on_sells": false
+    },
+    {
+      "side": "BUY",
+      "symbol": "605580.SH",
+      "name": "恒盛能源",
+      "qty": 100,
+      "reference_price": 21.33,
+      "estimated_fee": 5.02,
+      "reason": "综合因子排名 5",
+      "conditional_on_sells": false
+    },
+    {
+      "side": "BUY",
+      "symbol": "002349.SZ",
+      "name": "精华制药",
+      "qty": 200,
+      "reference_price": 8.68,
+      "estimated_fee": 5.02,
+      "reason": "综合因子排名 6",
+      "conditional_on_sells": false
+    }
+  ],
+  "pool_hash": "a84820aa70ce05cfe550a9ffe329bf6a3f1eed74983e5dcce136e9fc859a815a",
+  "code_hash": "7b4fcb6f8db6ef95c91bc71e0f38731a7ba81c2e2a1d2c346235cb481d173f59",
+  "legacy_unchanged": true,
+  "source_commit": "e1f2dc73160130908c72ce4e744a73cdb2ecb4b5"
+}

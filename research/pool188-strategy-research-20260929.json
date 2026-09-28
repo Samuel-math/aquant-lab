@@ -1,0 +1,217 @@
+{
+  "protocol": {
+    "created_at": "2026-09-28T18:34:32.449693+00:00",
+    "asof": "2026-09-28",
+    "candidates": 48,
+    "shortlist": 8,
+    "seed": 17,
+    "split_fractions": [
+      0.55,
+      0.8
+    ],
+    "workers": 24,
+    "data_hash": "ea25af7a99b16c1143cd341490bcf9016053e4698bd034a0bb5495c74b6b837f",
+    "config_hash": "27fa14854c3249506092a7b5b1453ddd8c526195408cd44d80ab68b8a8631353",
+    "code_hash": "7b4fcb6f8db6ef95c91bc71e0f38731a7ba81c2e2a1d2c346235cb481d173f59",
+    "script_hash": "0015bcde8b31c73a744d462245773971a8169deb96b1f3c33cfa7402c03c8681",
+    "pool_selection_date": "2026-09-28",
+    "conditional_on_current_pool": true,
+    "automatic_promotion": false,
+    "limitations": [
+      "当前底池由期末数据筛选，历史分段不构成无偏样本外业绩",
+      "单次时间切分，未完成多重检验修正；与每日24公式模拟独立",
+      "公司行动缺少适配时保留失败记录，不跳过日期或伪造成交"
+    ]
+  },
+  "split": {
+    "train_signal_start": "2025-04-07",
+    "train_max_label_end": "2026-01-23",
+    "validation": [
+      "2026-01-26",
+      "2026-06-12"
+    ],
+    "holdout": [
+      "2026-06-15",
+      "2026-09-28"
+    ]
+  },
+  "validation": [
+    {
+      "id": "c86f73c86c800c6b",
+      "expression": {
+        "op": "feature",
+        "name": "momentum_10"
+      },
+      "train_rank_ic": -0.03160129580192472,
+      "direction": -1,
+      "validation_status": "blocked",
+      "validation_error": "持仓出现公司行动，当前回测需公司行动适配器: 002322.SZ 2026-04-30"
+    },
+    {
+      "id": "248e908fd74d5dab",
+      "expression": {
+        "op": "sub",
+        "left": {
+          "op": "feature",
+          "name": "reversal_1"
+        },
+        "right": {
+          "op": "feature",
+          "name": "momentum_10"
+        }
+      },
+      "train_rank_ic": 0.02665655237704235,
+      "direction": 1,
+      "validation_status": "ok",
+      "validation_metrics": {
+        "total_return": -0.40671599999999997,
+        "annualized_return": -0.7681882842563088,
+        "max_drawdown": -0.4167286584579616,
+        "sharpe_zero_rate": -7.9564356313139415,
+        "trade_count": 446,
+        "fees_paid": 2406.16
+      }
+    },
+    {
+      "id": "fbc25918506108ec",
+      "expression": {
+        "op": "feature",
+        "name": "amount_ratio_60"
+      },
+      "train_rank_ic": -0.02649796474288282,
+      "direction": -1,
+      "validation_status": "ok",
+      "validation_metrics": {
+        "total_return": -0.19110400000000005,
+        "annualized_return": -0.4477960283395933,
+        "max_drawdown": -0.2542325643582348,
+        "sharpe_zero_rate": -2.302733966193111,
+        "trade_count": 253,
+        "fees_paid": 1379.04
+      }
+    },
+    {
+      "id": "f7f53cf744acc010",
+      "expression": {
+        "op": "feature",
+        "name": "amount_ratio_20"
+      },
+      "train_rank_ic": -0.02466463701713659,
+      "direction": -1,
+      "validation_status": "blocked",
+      "validation_error": "持仓出现公司行动，当前回测需公司行动适配器: 002033.SZ 2026-05-21"
+    },
+    {
+      "id": "9c73d0a200df1fa7",
+      "expression": {
+        "op": "add",
+        "left": {
+          "op": "add",
+          "left": {
+            "op": "feature",
+            "name": "momentum_10"
+          },
+          "right": {
+            "op": "feature",
+            "name": "momentum_10"
+          }
+        },
+        "right": {
+          "op": "feature",
+          "name": "volatility_20"
+        }
+      },
+      "train_rank_ic": -0.023276458985928977,
+      "direction": -1,
+      "validation_status": "blocked",
+      "validation_error": "持仓出现公司行动，当前回测需公司行动适配器: 600609.SH 2026-05-28"
+    },
+    {
+      "id": "20f154c6f6e7d091",
+      "expression": {
+        "op": "add",
+        "left": {
+          "op": "feature",
+          "name": "momentum_5"
+        },
+        "right": {
+          "op": "feature",
+          "name": "volatility_5"
+        }
+      },
+      "train_rank_ic": -0.02221022880873006,
+      "direction": -1,
+      "validation_status": "blocked",
+      "validation_error": "持仓出现公司行动，当前回测需公司行动适配器: 000708.SZ 2026-05-21"
+    },
+    {
+      "id": "13146ae47b231ae3",
+      "expression": {
+        "op": "sub",
+        "left": {
+          "op": "feature",
+          "name": "amount_ratio_20"
+        },
+        "right": {
+          "op": "feature",
+          "name": "overnight_gap"
+        }
+      },
+      "train_rank_ic": -0.020564672496640662,
+      "direction": -1,
+      "validation_status": "blocked",
+      "validation_error": "持仓出现公司行动，当前回测需公司行动适配器: 002458.SZ 2026-05-15"
+    },
+    {
+      "id": "22c8c7da4f3ff2e5",
+      "expression": {
+        "op": "add",
+        "left": {
+          "op": "feature",
+          "name": "amount_ratio_20"
+        },
+        "right": {
+          "op": "feature",
+          "name": "volatility_60"
+        }
+      },
+      "train_rank_ic": -0.02040632265885687,
+      "direction": -1,
+      "validation_status": "blocked",
+      "validation_error": "持仓出现公司行动，当前回测需公司行动适配器: 002003.SZ 2026-05-20"
+    }
+  ],
+  "status": "blocked",
+  "automatic_promotion": false,
+  "winner": {
+    "id": "fbc25918506108ec",
+    "expression": {
+      "op": "feature",
+      "name": "amount_ratio_60"
+    },
+    "train_rank_ic": -0.02649796474288282,
+    "direction": -1,
+    "validation_status": "ok",
+    "validation_metrics": {
+      "total_return": -0.19110400000000005,
+      "annualized_return": -0.4477960283395933,
+      "max_drawdown": -0.2542325643582348,
+      "sharpe_zero_rate": -2.302733966193111,
+      "trade_count": 253,
+      "fees_paid": 1379.04
+    }
+  },
+  "holdout": {
+    "status": "blocked",
+    "error": "持仓出现公司行动，当前回测需公司行动适配器: 603387.SH 2026-06-18"
+  },
+  "double_cost": {
+    "status": "blocked",
+    "error": "持仓出现公司行动，当前回测需公司行动适配器: 603387.SH 2026-06-18"
+  },
+  "baseline": {
+    "status": "blocked",
+    "error": "持仓出现公司行动，当前回测需公司行动适配器: 600999.SH 2026-07-16"
+  },
+  "runtime_seconds": 11.504
+}
