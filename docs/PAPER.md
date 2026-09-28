@@ -18,7 +18,17 @@
 
 本月运行中修改Python代码或策略配置会被拒绝，防止不记录地改变观察规则。新策略应在独立研究目录验证；先审核并建立新试验，再切换，不能重写本月收益。
 
-## Gmail 私密配置
+## 当前通知方式：本地 Gmail 插件
+
+服务器只产出数据和日报；Supervisor设置AQUANT_MAIL_CONFIG指向不存在的mail-disabled.json，禁用服务器SMTP。无需在服务器配置Gmail密码。
+
+本地Codex巡检每天北京时间08:40、20:40、21:40、22:40运行scripts/local_monitor.py，通过受限SSH密钥只读取固定报告。服务器强制执行scripts/export_monitor.py的部署副本，禁止客户端执行任意命令或端口转发。私钥只在本地~/.ssh/aquant_monitor_ed25519，未进入Git。
+
+本地快照、待发邮件和发送去重账本位于artifacts/local-monitor。新日报通过已连接Gmail插件发送；心跳中断、过期行情、发布不一致时只发异常通知。发送前预留、成功后记入Gmail消息ID；状态不明不自动重发。已过通知截止时间的计划标记仅供复盘。
+
+电脑必须开机、联网且Codex保持运行，Gmail连接需要持续有效。本地关闭时不巡检，但服务器研究任务仍独立运行。观察完成的最终日报发送后暂停巡检。
+
+## 备用方式：Gmail 私密配置（当前不启用）
 
 配置位于 `/root/.config/aquant/mail.json`，权限600；不提交Git，不将密码放进命令参数。先启用Google两步验证，再创建应用专用密码（不是登录密码）：https://support.google.com/mail/answer/185833 。默认采用smtp.gmail.com、465、TLS证书校验。
 
