@@ -10,7 +10,21 @@ from .operations import lock, status
 from .targets import forward_label
 
 
-def fit_and_predict(features, labels, date, count=24, seed=17, train_days=126):
+def _init_fit(features, train):
+    global _fit_features, _fit_train
+    _fit_features, _fit_train = features, train
+
+
+def _fit_candidate(candidate):
+    candidate = dict(candidate)
+    values = {(d, row['symbol']): evaluate_expression(candidate['expression'], row['features'])
+              for d, rows in _fit_features.items() for row in rows}
+    candidate['train_rank_ic'] = mean_ic(values, _fit_train)
+    candidate['direction'] = 1 if candidate['train_rank_ic'] >= 0 else -1
+    return candidate
+
+
+def fit_and_predict(features, labels, date, count=24, seed=17, train_days=126, workers=1, check_budget=lambda:None):
     # The target horizon is two sessions: only labels already observed by this date can train.
     available = [r for r in labels if r['status'] == 'observed' and r['label_available_date'] <= date
                  and r['signal_date'] < date]
@@ -23,11 +37,9 @@ def fit_and_predict(features, labels, date, count=24, seed=17, train_days=126):
     if not current:
         raise ValidationError('当日无可用因子特征')
     formulas = candidates(list(current[0]['features']), count, seed)
-    for candidate in formulas:
-        values = {(d, row['symbol']): evaluate_expression(candidate['expression'], row['features'])
-                  for d, rows in features.items() if d in allowed for row in rows}
-        candidate['train_rank_ic'] = mean_ic(values, train)
-        candidate['direction'] = 1 if candidate['train_rank_ic'] >= 0 else -1
+    from .parallel import ordered_map
+    formulas = list(ordered_map(_fit_candidate, formulas, workers, _init_fit,
+                    ({d: rows for d, rows in features.items() if d in allowed}, train), check_budget))
     formulas.sort(key=lambda r: (-abs(r['train_rank_ic']), r['id']))
     winner = formulas[0]
     predicted = [{'symbol': r['symbol'], 'name': r['name'],
@@ -62,7 +74,7 @@ def validate_prediction(data, saved, asof):
             'metric_type': 'factor_diagnostic_not_net_portfolio_return'}
 
 
-def update_rolling(data, cfg, asof, directory, replay_days=0, count=24, seed=17, max_seconds=600):
+def update_rolling(data, cfg, asof, directory, replay_days=0, count=24, seed=17, max_seconds=600, workers=1):
     data.validate_mode(cfg); data.snapshot(asof)
     if not 1 <= count <= 128 or not 0 <= replay_days <= 60:
         raise ValidationError('候选1..128；历史顺序回放0..60日')
@@ -74,7 +86,7 @@ def update_rolling(data, cfg, asof, directory, replay_days=0, count=24, seed=17,
     with lock(directory / 'run.lock'):
         try:
             status(directory / 'status.json', asof, 'running')
-            features, labels = prepare(data, cfg, asof, check)
+            features, labels = prepare(data, cfg, asof, check, workers=workers)
             predictions_dir = directory / 'predictions'; predictions_dir.mkdir(exist_ok=True)
             evaluations_dir = directory / 'evaluations'; evaluations_dir.mkdir(exist_ok=True)
             new_evaluations = []
@@ -97,7 +109,7 @@ def update_rolling(data, cfg, asof, directory, replay_days=0, count=24, seed=17,
                 check()
                 dest = predictions_dir / (date + '.json')
                 if dest.exists(): continue  # Never rewrite a historical prediction after seeing outcomes.
-                model = fit_and_predict(features, labels, date, count, seed)
+                model = fit_and_predict(features, labels, date, count, seed, workers=workers, check_budget=check)
                 model.update(target=cfg['prediction_target'], mode=cfg['mode'],
                              created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
                              provenance='prospective' if date == asof and prospective(date, data.next_day(date), dt.datetime.now(dt.timezone.utc)) else 'historical_replay')

@@ -81,7 +81,7 @@ def main():
         print(json.dumps({'recorded':True})); return
     now=dt.datetime.now(TZ)
     cmd=['ssh','-i',str(Path.home()/'.ssh/aquant_monitor_ed25519'),'-o','IdentitiesOnly=yes','-o','BatchMode=yes',
-         '-o','ControlPath=none','-o','StrictHostKeyChecking=yes','-o','ConnectTimeout=10','-p','18088','root@connect.bjb2.seetacloud.com']
+         '-o','ControlPath=none','-o','StrictHostKeyChecking=yes','-o','ConnectTimeout=10','-p','45626','root@connect.bjb1.seetacloud.com']
     try:
         p=subprocess.run(cmd,capture_output=True,text=True,timeout=25,check=True)
         snapshot=json.loads(p.stdout)

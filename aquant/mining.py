@@ -68,35 +68,67 @@ def candidates(names, count, seed):
     return results
 
 
-def prepare(data, cfg, asof, check_budget):
-    days = [d for d in data.calendar if min(d for d, _ in data.rows) <= d <= asof]
-    features, labels = {}, []
-    for date in days:
-        check_budget()
-        records = []
-        for item in rank(data, date, cfg):
-            hist = data.history(item['symbol'], date, 61)
-            if not hist or any(r['suspended'] for r in hist):
-                continue
-            prices = [r['close'] * r['adj_factor'] for r in hist]
-            returns = [b / a - 1 for a, b in zip(prices, prices[1:])]
-            values = {}
-            for window in (5, 10, 20, 60):
-                values['momentum_%d' % window] = prices[-1] / prices[-window-1] - 1
-                values['volatility_%d' % window] = statistics.pstdev(returns[-window:])
-                values['amount_ratio_%d' % window] = hist[-1]['amount'] / max(1, statistics.mean(r['amount'] for r in hist[-window:]))
-            values['reversal_1'] = -returns[-1]
-            values['overnight_gap'] = hist[-1]['open'] * hist[-1]['adj_factor'] / prices[-2] - 1
-            records.append({'symbol': item['symbol'], 'name': item['name'], 'price': item['price'], 'features': values})
-        if len(records) < 3:
+class _SnapshotView:
+    """Memoize validated snapshots for one read-only feature preparation pass."""
+    def __init__(self, data):
+        self.data = data
+        self.snapshots = {}
+
+    def __getattr__(self, name):
+        return getattr(self.data, name)
+
+    def snapshot(self, date):
+        if date not in self.snapshots:
+            self.snapshots[date] = self.data.snapshot(date)
+        return self.snapshots[date]
+
+
+def _init_prepare(data, cfg, asof):
+    global _prepare_data, _prepare_cfg, _prepare_asof
+    _prepare_data = _SnapshotView(data)
+    _prepare_cfg, _prepare_asof = cfg, asof
+
+
+def _prepare_day(date):
+    data, cfg, asof = _prepare_data, _prepare_cfg, _prepare_asof
+    records = []
+    for item in rank(data, date, cfg):
+        hist = data.history(item['symbol'], date, 61)
+        if not hist or any(r['suspended'] for r in hist):
             continue
-        for name in records[0]['features']:
-            normalized = centered_ranks([r['features'][name] for r in records])
-            for r, value in zip(records, normalized):
-                r['features'][name] = value
-        features[date] = records
-        for row in records:
-            labels.append(forward_label(data, row['symbol'], date, asof))
+        prices = [r['close'] * r['adj_factor'] for r in hist]
+        returns = [b / a - 1 for a, b in zip(prices, prices[1:])]
+        values = {}
+        for window in (5, 10, 20, 60):
+            values['momentum_%d' % window] = prices[-1] / prices[-window-1] - 1
+            values['volatility_%d' % window] = statistics.pstdev(returns[-window:])
+            values['amount_ratio_%d' % window] = hist[-1]['amount'] / max(1, statistics.mean(r['amount'] for r in hist[-window:]))
+        values['reversal_1'] = -returns[-1]
+        values['overnight_gap'] = hist[-1]['open'] * hist[-1]['adj_factor'] / prices[-2] - 1
+        records.append({'symbol': item['symbol'], 'name': item['name'], 'price': item['price'], 'features': values})
+    if len(records) < 3:
+        return date, [], []
+    for name in records[0]['features']:
+        normalized = centered_ranks([r['features'][name] for r in records])
+        for r, value in zip(records, normalized):
+            r['features'][name] = value
+    return date, records, [forward_label(data, row['symbol'], date, asof) for row in records]
+
+
+def prepare(data, cfg, asof, check_budget, workers=1):
+    from .parallel import ordered_map
+    first = min(d for d, _ in data.rows)
+    days = [d for d in data.calendar if first <= d <= asof]
+    features, labels = {}, []
+    global _prepare_data, _prepare_cfg, _prepare_asof
+    try:
+        for date, records, outcomes in ordered_map(_prepare_day, days, workers,
+                                                   _init_prepare, (data, cfg, asof), check_budget):
+            if records:
+                features[date] = records
+                labels.extend(outcomes)
+    finally:
+        _prepare_data = _prepare_cfg = _prepare_asof = None
     return features, labels
 
 

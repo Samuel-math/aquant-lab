@@ -2,6 +2,7 @@ import copy
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 from aquant.core import read_config, ValidationError
 from aquant.data import CSVData, generate_demo
@@ -47,6 +48,23 @@ class RollingSourceTests(unittest.TestCase):
         b=fit_and_predict(self.features,changed,date,count=4)
         self.assertEqual(a,b)
         self.assertLessEqual(a['train_max_label_end'],date)
+
+    def test_snapshot_memoization_preserves_all_features_and_labels(self):
+        with patch('aquant.mining._SnapshotView',side_effect=lambda data:data):
+            expected=prepare(self.data,self.cfg,self.asof,lambda:None)
+        with patch.object(self.data,'snapshot',wraps=self.data.snapshot) as snapshot:
+            actual=prepare(self.data,self.cfg,self.asof,lambda:None)
+            self.assertEqual(actual,expected)
+            dates=[call.args[0] for call in snapshot.call_args_list]
+            self.assertEqual(len(dates),len(set(dates)))
+
+    def test_parallel_features_labels_and_model_are_identical(self):
+        features,labels=prepare(self.data,self.cfg,self.asof,lambda:None,workers=2)
+        self.assertEqual((features,labels),(self.features,self.labels))
+        date=self.data.calendar[160]
+        serial=fit_and_predict(features,labels,date,count=4,workers=1)
+        parallel=fit_and_predict(features,labels,date,count=4,workers=2)
+        self.assertEqual(serial,parallel)
 
     def test_validation_waits_for_two_sessions(self):
         date=self.data.calendar[160]
