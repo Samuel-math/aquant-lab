@@ -1,0 +1,15 @@
+[Unit]
+Description=Aquant daily signals and email (manual trading only)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=aquant
+WorkingDirectory=/opt/aquant
+EnvironmentFile=/etc/aquant.env
+ExecStart=/opt/aquant/deploy/daily.sh
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/aquant/data /opt/aquant/artifacts

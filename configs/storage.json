@@ -1,0 +1,8 @@
+{
+  "core_retention": "permanent",
+  "core_contents": ["daily_bars", "1000_observations", "adjustments", "security_status", "revisions", "prediction_records"],
+  "full_minute_archive": false,
+  "max_bytes": 2147483648,
+  "min_free_bytes": 536870912,
+  "action_on_limit": "stop_ingestion_keep_core"
+}

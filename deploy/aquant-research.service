@@ -1,0 +1,13 @@
+[Unit]
+Description=Aquant bounded research run (does not promote strategies)
+
+[Service]
+Type=oneshot
+User=aquant
+WorkingDirectory=/opt/aquant
+EnvironmentFile=/etc/aquant.env
+ExecStart=/usr/bin/python3 -m aquant research --config configs/live.json --data data/live --out artifacts/research-latest.json
+TimeoutStartSec=3600
+MemoryMax=2G
+CPUQuota=100%
+NoNewPrivileges=true

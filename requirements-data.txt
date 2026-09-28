@@ -1,0 +1,4 @@
+# Optional real-data adapter, installed only in the server virtual environment.
+baostock==0.9.4
+pandas==2.0.3
+numpy==1.24.4

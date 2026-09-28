@@ -1,0 +1,11 @@
+AQUANT_HOME=/opt/aquant
+AQUANT_DATA=data/live
+AQUANT_CONFIG=configs/live.json
+AQUANT_LEDGER=data/live-account.sqlite
+PYTHON=/usr/bin/python3
+SMTP_HOST=smtp.example.com
+SMTP_PORT=465
+SMTP_USER=replace-me
+SMTP_PASSWORD=replace-me
+MAIL_FROM=replace-me@example.com
+MAIL_TO=replace-me@example.com

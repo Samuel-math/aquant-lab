@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Aquant after market data arrives
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 19:00:00 Asia/Shanghai
+Persistent=true
+Unit=aquant-daily.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly bounded research run
+
+[Timer]
+OnCalendar=Sun *-*-* 10:00:00 Asia/Shanghai
+Persistent=true
+Unit=aquant-research.service
+
+[Install]
+WantedBy=timers.target

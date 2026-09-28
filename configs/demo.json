@@ -1,0 +1,40 @@
+{
+  "mode": "demo",
+  "initial_cash": 10000,
+  "fees": {
+    "label": "演示假设，非券商报价",
+    "commission_rate": 0.0003,
+    "minimum_commission": 5,
+    "sell_stamp_tax_rate": 0.0005,
+    "transfer_fee_rate": 1e-05,
+    "slippage_bps": 10
+  },
+  "strategy": {
+    "name": "baseline-v1",
+    "weights": {
+      "momentum": 0.4,
+      "low_volatility": 0.3,
+      "liquidity": 0.3
+    },
+    "lookback": 20,
+    "holdings": 4,
+    "exit_rank": 6,
+    "max_weight": 0.25,
+    "cash_reserve": 0.05,
+    "min_listing_days": 120,
+    "min_amount": 10000000,
+    "min_order_value": 1000,
+    "max_price_deviation": 0.03,
+    "max_participation": 0.01
+  },
+  "prediction_target": {
+    "name": "next_1000_to_following_1000",
+    "signal_time": "after_close",
+    "entry_session_offset": 1,
+    "exit_session_offset": 2,
+    "price_field": "intraday.price",
+    "execution_time": "10:00:00",
+    "timezone": "Asia/Shanghai",
+    "price_convention": "last_trade_at_or_before_1000"
+  }
+}

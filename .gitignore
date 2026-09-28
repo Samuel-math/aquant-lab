@@ -1,0 +1,27 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+*.egg-info/
+build/
+dist/
+/data/*
+!/data/.gitkeep
+/artifacts/*
+!/artifacts/.gitkeep
+.DS_Store
+
+# Local credentials and runtime state
+.env.*
+!.env.example
+/configs/live.json
+/configs/mail.json
+/configs/*.local.json
+/secrets/
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+*.sqlite
+*.sqlite-*
+*.log

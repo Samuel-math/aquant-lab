@@ -1,0 +1,41 @@
+{
+  "mode": "live",
+  "initial_cash": 10000,
+  "fees": {
+    "label": "待按券商实际收费填写；避免重复计费",
+    "commission_rate": null,
+    "minimum_commission": null,
+    "sell_stamp_tax_rate": null,
+    "transfer_fee_rate": null,
+    "slippage_bps": null
+  },
+  "strategy": {
+    "name": "baseline-unapproved",
+    "weights": {
+      "momentum": 0.4,
+      "low_volatility": 0.3,
+      "liquidity": 0.3
+    },
+    "lookback": 20,
+    "holdings": 4,
+    "exit_rank": 6,
+    "max_weight": 0.25,
+    "cash_reserve": 0.05,
+    "min_listing_days": 120,
+    "min_amount": 10000000,
+    "min_order_value": 1000,
+    "max_price_deviation": 0.03,
+    "max_participation": 0.01
+  },
+  "approved_strategy": false,
+  "prediction_target": {
+    "name": "next_1000_to_following_1000",
+    "signal_time": "after_close",
+    "entry_session_offset": 1,
+    "exit_session_offset": 2,
+    "price_field": "intraday.price",
+    "execution_time": "10:00:00",
+    "timezone": "Asia/Shanghai",
+    "price_convention": "last_trade_at_or_before_1000"
+  }
+}
