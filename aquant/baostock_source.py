@@ -81,6 +81,8 @@ def normalized(cache, dates, quote_time="10:00:00", window=30):
         while index<len(factors) and factors[index]['dividOperateDate']<=date:
             factor=float(factors[index]['backAdjustFactor']); index+=1
         suspended=raw['tradestatus']!='1'
+        if quote_time=='09:40:00' and not suspended and float(raw['open'] or 0)<=0:
+            raise ValidationError('开盘价缺失，禁止用收盘价替代09:30代理: '+code+' '+date)
         close=float(raw['close'] or last_price or raw['preclose'] or 0)
         op=float(raw['open'] or close)
         if min(close,op)<=0: raise ValidationError('缺失价格且无前值: '+code+' '+date)

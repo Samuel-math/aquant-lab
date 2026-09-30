@@ -46,6 +46,12 @@ class MorningTests(unittest.TestCase):
         self.assertEqual(a,b)
         self.assertEqual(a['volume'],self.data.rows[(self.entry,self.symbol)]['volume']/240)
 
+    def test_zero_capacity_proxy_does_not_erase_observed_open_label(self):
+        self.data.rows[(self.entry,self.symbol)]['volume']=0
+        r=forward_label(self.data,self.symbol,self.date,self.exit,self.cfg)
+        self.assertEqual(r['status'],'observed')
+        self.assertIn('exit_capacity_proxy_zero',r['execution_flags'])
+
     def test_wrong_dataset_time_rejected(self):
         self.data.validate_mode(self.cfg)
         self.data.metadata['entry_time']='10:00:00'

@@ -82,7 +82,9 @@ def forward_label(data, symbol, signal_date, asof, cfg=None):
     flags = result["execution_flags"]
     if entry["suspended"] or not entry_quote["tradable"] or entry_quote["volume"] <= 0:
         flags.append("entry_untradable")
-    if end["suspended"] or not exit_quote["tradable"] or exit_quote["volume"] <= 0:
+    if morning(cfg) and exit_quote['volume']<=0:
+        flags.append('exit_capacity_proxy_zero')
+    if end["suspended"] or not exit_quote["tradable"] or (not morning(cfg) and exit_quote["volume"] <= 0):
         flags.append("exit_untradable")
     if entry["limit_up"] and entry_quote["price"] >= entry["limit_up"]:
         flags.append("entry_limit_up")
@@ -93,7 +95,7 @@ def forward_label(data, symbol, signal_date, asof, cfg=None):
     if entry["adj_factor"] != end["adj_factor"]:
         result["status"] = "corporate_action_unsupported"
         return result
-    if entry["suspended"] or end["suspended"] or not entry_quote["tradable"] or entry_quote["volume"] <= 0 or not exit_quote["tradable"] or exit_quote["volume"] <= 0:
+    if entry["suspended"] or end["suspended"] or not entry_quote["tradable"] or entry_quote["volume"] <= 0 or not exit_quote["tradable"] or (not morning(cfg) and exit_quote["volume"] <= 0):
         result["status"] = "unobservable_execution_price"
         return result
     result["gross_return"] = exit_quote["price"] / entry_quote["price"] - 1
