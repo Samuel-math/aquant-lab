@@ -3,24 +3,28 @@ import statistics
 from .account import Account
 from .core import ValidationError, fee
 from .strategy import propose
+from .targets import execution_quote, morning
 
 
 def execute_orders(data, cfg, account, date, pending):
     rows = data.snapshot(date)
     trades, rejected = [], []
+    pending=sorted(pending,key=lambda o:0 if o['side']=='SELL' else 1) if morning(cfg) else pending
     for order in pending:
         symbol, side = order["symbol"], order["side"]
         row = rows.get(symbol)
-        quote = data.intraday.get((date, symbol))
+        quote = execution_quote(data,cfg,date,symbol,side)
         if row is not None and not row["suspended"] and quote is None:
-            raise ValidationError("缺少10:00执行观测: " + date + " " + symbol)
+            raise ValidationError("缺少指定时点执行观测: " + date + " " + symbol)
         reason = None
+        if morning(cfg) and side=='BUY' and (symbol in account.positions or len(account.positions)>=cfg['strategy']['holdings']):
+            rejected.append({'date':date,'symbol':symbol,'reason':'旧仓未退出，禁止叠加同股或超出持仓数量'}); continue
         if row is None or row["suspended"] or quote is None or not quote["tradable"] or quote["volume"] <= 0:
             reason = "停牌或缺少可交易行情"
         elif abs(quote["price"] / order["reference_price"] - 1) > cfg["strategy"]["max_price_deviation"]:
-            reason = "10:00价格超过偏离阈值"
+            reason = "执行时点价格超过偏离阈值"
         elif (side == "BUY" and row["limit_up"] and quote["price"] >= row["limit_up"]) or (side == "SELL" and row["limit_down"] and quote["price"] <= row["limit_down"]):
-            reason = "10:00触及方向性涨跌停，保守不成交"
+            reason = "执行时点触及方向性涨跌停，保守不成交"
         elif side == "BUY" and (row["risk_warning"] or row["delisting"]):
             reason = "次日证券状态变化"
         if reason:
@@ -37,7 +41,7 @@ def execute_orders(data, cfg, account, date, pending):
             qty = min(qty, sum(l["qty"] for l in account.positions.get(symbol, {}).get("lots", []) if l["date"] < date))
         if qty <= 0:
             rejected.append({"date": date, "symbol": symbol, "reason": "现金/可卖数量/成交量不足"}); continue
-        event = {"kind": side, "date": date, "symbol": symbol, "qty": qty, "price": price, "fee": fee(cfg, side, qty * price), "execution_time": "10:00:00+08:00"}
+        event = {"kind": side, "date": date, "symbol": symbol, "qty": qty, "price": price, "fee": fee(cfg, side, qty * price), "execution_time": quote['timestamp'].split('T')[1]}
         account.apply(event); trades.append(event)
         if qty < order["qty"]:
             rejected.append({"date": date, "symbol": symbol, "reason": "部分成交，剩余数量取消", "unfilled_qty": order["qty"] - qty})
@@ -47,7 +51,7 @@ def execute_orders(data, cfg, account, date, pending):
 def run(data, cfg, start=None, end=None, signal_ranker=None):
     data.validate_mode(cfg)
     if not data.intraday:
-        raise ValidationError("缺少10:00执行观测，禁止用开盘价回退")
+        raise ValidationError("缺少指定时点执行观测，禁止用开盘价回退")
     observed = sorted(set(d for d, _ in data.rows))
     first, last = start or observed[0], end or observed[-1]
     if first < observed[0] or last > observed[-1] or first > last:
@@ -79,4 +83,4 @@ def run(data, cfg, start=None, end=None, signal_ranker=None):
     for value in values:
         peak = max(peak, value); drawdown = min(drawdown, value / peak - 1)
     vol = statistics.pstdev(returns)
-    return {"metrics": {"total_return": values[-1] / values[0] - 1, "annualized_return": (values[-1] / values[0]) ** (252 / len(days)) - 1, "max_drawdown": drawdown, "sharpe_zero_rate": statistics.mean(returns) / vol * math.sqrt(252) if vol else 0, "trade_count": len(trades), "fees_paid": round(sum(t["fee"] for t in trades), 2)}, "curve": curve, "trades": trades, "unfilled": rejected, "limitations": ["次日10:00观测价近似成交，不还原排队；使用观测窗口的每分钟均量作容量近似，不保证可成交", "不支持持仓期间除权除息回测，检测后停止", "未计利息，无基准超额归因；短样本年化值不代表预期收益"]}
+    return {"metrics": {"total_return": values[-1] / values[0] - 1, "annualized_return": (values[-1] / values[0]) ** (252 / len(days)) - 1, "max_drawdown": drawdown, "sharpe_zero_rate": statistics.mean(returns) / vol * math.sqrt(252) if vol else 0, "trade_count": len(trades), "fees_paid": round(sum(t["fee"] for t in trades), 2)}, "curve": curve, "trades": trades, "unfilled": rejected, "limitations": ["配置时点观测价近似成交，不还原排队；使用观测窗口的每分钟均量作容量近似，不保证可成交", "不支持持仓期间除权除息回测，检测后停止", "未计利息，无基准超额归因；短样本年化值不代表预期收益"]}

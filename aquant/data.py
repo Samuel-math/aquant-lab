@@ -58,7 +58,7 @@ class CSVData:
                 self.rows[key] = r
         if not self.rows:
             raise ValidationError("无行情数据")
-        self.intraday = read_quotes(self.directory / "intraday.csv", self.calendar)
+        self.intraday = read_quotes(self.directory / "intraday.csv", self.calendar,self.metadata.get('entry_time','10:00:00'))
         self.version = digest({"metadata": self.metadata, "calendar": self.calendar, "bars": list(self.rows.values()), "intraday": [[d, symbol, q] for (d, symbol), q in sorted(self.intraday.items())]})
 
     def snapshot(self, date):
@@ -85,6 +85,9 @@ class CSVData:
     def validate_mode(self, cfg):
         if (cfg["mode"] == "demo") != (self.metadata["kind"] == "demo"):
             raise ValidationError("数据和配置的 demo/live 模式不一致")
+        target=cfg.get('prediction_target',{})
+        if self.metadata.get('entry_time','10:00:00')!=target.get('entry_time',target.get('execution_time','10:00:00')):
+            raise ValidationError('数据执行时点与预测目标不一致，禁止复用旧标签')
 
 
 def generate_demo(directory, sessions=260):

@@ -13,12 +13,12 @@ from .strategy import propose, rank
 TZ = dt.timezone(dt.timedelta(hours=8))
 
 
-def deadline(date):
-    return dt.datetime.fromisoformat(date + 'T09:30:00+08:00')
+def deadline(date, cfg=None):
+    return dt.datetime.fromisoformat(date + 'T'+(cfg or {}).get('plan_deadline','09:30:00')+'+08:00')
 
 
-def prospective(signal_date, execution_date, now):
-    return dt.datetime.fromisoformat(signal_date+'T15:00:00+08:00') <= now < deadline(execution_date)
+def prospective(signal_date, execution_date, now, cfg=None):
+    return dt.datetime.fromisoformat(signal_date+'T15:00:00+08:00') <= now < deadline(execution_date,cfg)
 
 
 def update(data, cfg, prediction, directory, now=None):
@@ -31,13 +31,15 @@ def update(data, cfg, prediction, directory, now=None):
 def _update(data, cfg, prediction, root, now):
     asof = prediction['signal_date']; execution = data.next_day(asof)
     data.validate_mode(cfg)
+    if 'target' in prediction and prediction['target']!=cfg['prediction_target']:
+        raise ValidationError('预测标签与模拟协议不一致')
     if cfg.get('pool_hash'):
         universe=data.metadata.get('universe',{})
         if universe.get('pool_hash')!=cfg['pool_hash'] or asof<universe.get('selection_date','9999'):
             raise ValidationError('股票池与模拟配置不符或信号早于选池日')
     manifest_path = root/'protocol.json'
     if not manifest_path.exists():
-        if not prospective(asof, execution, now):
+        if not prospective(asof, execution, now,cfg):
             raise ValidationError('首次模拟必须在下一交易日09:30前冻结，禁止补做历史成交')
         start = dt.date.fromisoformat(execution)
         year, month = (start.year+1, 1) if start.month == 12 else (start.year, start.month+1)
@@ -46,7 +48,7 @@ def _update(data, cfg, prediction, root, now):
             'config':cfg, 'config_hash':digest(cfg), 'code_hash':code_hash(),
             'candidate_count':24, 'seed':17, 'train_days':126,
             'mode':'paper', 'selection':'daily rolling training; fixed 24 candidates; no automatic strategy promotion',
-            'valuation':'daily close; fills at 10:00 plus slippage and fees; no terminal liquidation',
+            'valuation':cfg.get('execution_description','daily close; fills at 10:00 plus slippage and fees; no terminal liquidation'),
             'cashflows':'fixed initial cash; deposits require a separate trial'})
     protocol = json.loads(manifest_path.read_text())
     if protocol['config_hash'] != digest(cfg) or protocol['code_hash'] != code_hash():
@@ -72,7 +74,7 @@ def _update(data, cfg, prediction, root, now):
                 if len(set(held)) > 1: raise ValidationError('持仓公司行动，暂停模拟并等待对账: '+symbol)
             saved = db.execute('SELECT payload FROM plans WHERE date=?',(date,)).fetchone()
             plan = json.loads(saved[0]) if saved else None
-            if plan and dt.datetime.fromisoformat(plan['frozen_at']) >= deadline(date):
+            if plan and dt.datetime.fromisoformat(plan['frozen_at']) >= deadline(date,cfg):
                 raise ValidationError('计划冻结晚于截止时间')
             fills, rejected = execute_orders(data,cfg,account,date,plan['orders'] if plan else [])
             equity = account.cash + sum(p['qty']*rows[s]['close'] for s,p in account.positions.items())
@@ -82,9 +84,9 @@ def _update(data, cfg, prediction, root, now):
             history.append(record)
         plan_row = db.execute('SELECT payload FROM plans WHERE date=?',(execution,)).fetchone()
         plan = json.loads(plan_row[0]) if plan_row else None
-        if not plan and protocol['start'] <= execution < protocol['end_exclusive'] and prospective(asof,execution,now):
+        if not plan and protocol['start'] <= execution < protocol['end_exclusive'] and prospective(asof,execution,now,cfg):
             created = dt.datetime.fromisoformat(prediction['created_at'])
-            if not prospective(asof,execution,created) or created > now or prediction['provenance'] != 'prospective':
+            if not prospective(asof,execution,created,cfg) or created > now or prediction['provenance'] != 'prospective':
                 raise ValidationError('不得将历史回放预测用于前向模拟')
             eligible = {r['symbol'] for r in rank(data,asof,cfg)}
             rankings = [dict(r) for r in prediction['predictions'] if r['symbol'] in eligible]
@@ -102,7 +104,7 @@ def _update(data, cfg, prediction, root, now):
                   'max_drawdown':drawdown,'fees_paid':round(sum(t['fee'] for r in history for t in r['fills']),2),
                   'trade_count':sum(len(r['fills']) for r in history),'positions':account.positions,'next_plan':plan,
                   'missing_plan_dates':[r['date'] for r in history if r['plan_missing']],
-                  'limitations':[cfg.get('universe_description','24只历史主板样本，不是全市场'),'10:00近似撮合，盘后核算，不代表实盘成交','费用为假设配置；公司行动暂停核算','短期结果不证明策略有效；现金基准收益为0']}
+                  'limitations':[cfg.get('universe_description','24只历史主板样本，不是全市场'),cfg.get('execution_description','10:00近似撮合，盘后核算，不代表实盘成交'),'费用为假设配置；公司行动暂停核算','短期结果不证明策略有效；现金基准收益为0']}
         write_json(root/'latest.json',result)
         text = render(result)
         (root/'latest.md').write_text(text,encoding='utf-8')
@@ -119,7 +121,7 @@ def render(r):
            '模拟成交笔数：'+str(r['trade_count']), '', '## 下次模拟计划','']
     plan=r['next_plan']
     if plan:
-        lines += ['执行日：'+plan['execution_date']+' 10:00（北京时间）；冻结于：'+plan['frozen_at'], '', '|方向|股票|股数|参考价|','|---|---|---:|---:|']
+        lines += ['执行日：'+plan['execution_date']+' '+plan.get('execution_schedule','10:00')+'（北京时间）；冻结于：'+plan['frozen_at'], '', '|方向|股票|股数|参考价|','|---|---|---:|---:|']
         lines += ['|%s|%s %s|%d|%.2f|'%(o['side'],o['symbol'],o['name'],o['qty'],o['reference_price']) for o in plan['orders']]
         if not plan['orders']: lines += ['无调仓。']
     else: lines += ['无可执行的新计划；不会追补历史交易。']

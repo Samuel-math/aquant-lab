@@ -60,7 +60,8 @@ def fit_and_predict(features, labels, date, count=24, seed=17, train_days=126, w
 def validate_prediction(data, saved, asof):
     outcomes = []
     for prediction in saved['predictions']:
-        row = forward_label(data, prediction['symbol'], saved['signal_date'], asof)
+        row = forward_label(data, prediction['symbol'], saved['signal_date'], asof,
+                            {'prediction_target':saved['target']} if 'target' in saved else None)
         outcomes.append(dict(row, score=prediction['score'], rank=prediction['rank']))
     if not outcomes or any(r['status'] == 'pending' for r in outcomes):
         return None
@@ -112,7 +113,7 @@ def update_rolling(data, cfg, asof, directory, replay_days=0, count=24, seed=17,
                 model = fit_and_predict(features, labels, date, count, seed, workers=workers, check_budget=check)
                 model.update(target=cfg['prediction_target'], mode=cfg['mode'],
                              created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
-                             provenance='prospective' if date == asof and prospective(date, data.next_day(date), dt.datetime.now(dt.timezone.utc)) else 'historical_replay')
+                             provenance='prospective' if date == asof and prospective(date, data.next_day(date), dt.datetime.now(dt.timezone.utc),cfg) else 'historical_replay')
                 write_json(dest, model); created.append(date)
             score_existing()  # Mature replay labels may be evaluated, still explicitly historical replay.
             evaluated = [json.loads(p.read_text(encoding='utf-8')) for p in sorted(evaluations_dir.glob('*.json'))]

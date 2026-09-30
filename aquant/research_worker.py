@@ -29,7 +29,7 @@ def stop_scheduler(signum, frame):
     raise SystemExit(128+signum)
 
 
-def cycle(data_root, out_root, sample_size, replay_days=0, config='configs/research-real.json', pool=None, workers=1):
+def cycle(data_root, out_root, sample_size, replay_days=0, config='configs/research-real.json', pool=None, workers=1, asof=None):
     from .baostock_source import sync_baostock
     from .core import read_config
     from .data import CSVData
@@ -46,7 +46,9 @@ def cycle(data_root, out_root, sample_size, replay_days=0, config='configs/resea
         if replay_days: raise ValidationError('当期精选池不运行历史回放冒充前向验证')
     elif cfg.get('pool_hash'):
         raise ValueError('试验要求指定股票池')
-    synced=sync_baostock(data_root,end=completed.isoformat(),sample_size=sample_size,pool_path=pool)
+    synced=sync_baostock(data_root,end=asof or completed.isoformat(),sample_size=sample_size,pool_path=pool,
+                         quote_time=cfg['prediction_target'].get('entry_time','10:00:00'),
+                         minute_start=cfg.get('minute_history_start'))
     data=CSVData(synced['dataset'])
     result=update_rolling(data,cfg,synced['asof'],out_root,
                           replay_days=replay_days,count=24,max_seconds=1200,workers=workers)
@@ -68,9 +70,12 @@ def main():
     p.add_argument('--config',default='configs/research-real.json'); p.add_argument('--pool')
     p.add_argument('--timeout',type=int,default=1800)
     p.add_argument('--workers',type=int,default=1)
+    p.add_argument('--asof',help='Explicit completed data date, one-off bootstrap only')
     args=p.parse_args()
+    if args.asof and (not args.once or args.asof>str(dt.datetime.now(TZ).date()) or (args.asof==str(dt.datetime.now(TZ).date()) and dt.datetime.now(TZ).hour<15)):
+        p.error('--asof must be a completed date and used with --once')
     if args.once:
-        print(json.dumps(cycle(args.data_root,args.out_root,args.sample_size,args.replay_days,args.config,args.pool,args.workers),ensure_ascii=False,indent=2)); return
+        print(json.dumps(cycle(args.data_root,args.out_root,args.sample_size,args.replay_days,args.config,args.pool,args.workers,args.asof),ensure_ascii=False,indent=2)); return
     out=Path(args.out_root); out.mkdir(parents=True,exist_ok=True)
     signal.signal(signal.SIGTERM,stop_scheduler)
     state_path=out/'scheduler.json'

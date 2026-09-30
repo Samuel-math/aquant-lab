@@ -34,6 +34,27 @@ def rank(data, date, cfg):
 
 
 def propose(data, date, cfg, account, rankings=None):
+    if cfg['strategy'].get('liquidate_daily'):
+        import copy
+        from .account import Account
+        rows=data.snapshot(date)
+        sells=[]; projected=account.cash
+        for symbol,position in sorted(account.positions.items()):
+            value=position['qty']*rows[symbol]['close']
+            estimated=fee(cfg,'SELL',value)
+            projected+=max(0,value-estimated)
+            sells.append(dict(side='SELL',symbol=symbol,name=rows[symbol]['name'],qty=position['qty'],
+                              reference_price=rows[symbol]['close'],estimated_fee=estimated,
+                              reason='09:30退出隔夜持仓',conditional_on_sells=False,execution_time='09:30:00'))
+        settings=copy.deepcopy(cfg); settings['strategy']['liquidate_daily']=False
+        plan=propose(data,date,settings,Account(projected),rankings)
+        for order in plan['orders']:
+            order.update(conditional_on_sells=bool(sells),execution_time='09:40:00')
+        plan.update(orders=sells+plan['orders'],cash=round(account.cash,2),positions=account.positions,
+                    equity=round(account.cash+sum(p['qty']*rows[s]['close'] for s,p in account.positions.items()),2),
+                    position_prices={s:rows[s]['close'] for s in account.positions},
+                    notification_deadline=cfg['plan_deadline'],execution_schedule='09:30卖旧仓；09:40买新仓（开盘价近似）')
+        return plan
     rows = data.snapshot(date)
     rankings = rank(data, date, cfg) if rankings is None else rankings
     s = cfg["strategy"]

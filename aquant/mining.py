@@ -112,7 +112,7 @@ def _prepare_day(date):
         normalized = centered_ranks([r['features'][name] for r in records])
         for r, value in zip(records, normalized):
             r['features'][name] = value
-    return date, records, [forward_label(data, row['symbol'], date, asof) for row in records]
+    return date, records, [forward_label(data, row['symbol'], date, asof,cfg) for row in records]
 
 
 def prepare(data, cfg, asof, check_budget, workers=1):
@@ -162,7 +162,7 @@ def mine(data, cfg, asof, output, count=48, shortlist=8, seed=17, max_seconds=30
         raise ValidationError('搜索预算非法：候选1..256、入围1..32且不超过候选数、时间1..3600秒')
     validate_target(cfg); data.validate_mode(cfg); data.snapshot(asof)
     if not data.intraday:
-        raise ValidationError('因子搜索需要10:00分钟观测，不能使用日线开盘价替代')
+        raise ValidationError('因子搜索需要指定买入时点的分钟观测，不能使用日线开盘价替代')
     started = time.monotonic()
     def check_budget():
         if time.monotonic() - started > max_seconds:
@@ -235,14 +235,14 @@ def mine(data, cfg, asof, output, count=48, shortlist=8, seed=17, max_seconds=30
                                       '一次训练/验证/留出切分，尚非完整嵌套滚动验证',
                                       '尝试过的候选全部记录，但尚未实现多重检验显著性修正',
                                       '同一留出区间反复搜索会失去独立性，不可视为新的样本外证据',
-                                      '前一分钟成交量仅作容量近似；人工10:00成交可能偏离观测价',
+                                      '成交容量采用代理假设；人工成交可能偏离配置时点观测价',
                                       '公式方向只在训练期确定；没有自动启用候选策略']}
             result['experiment_id'] = digest({k: v for k, v in result.items() if k != 'runtime_seconds'})[:20]
             write_json(output, result)
             write_json(output.parent / 'experiments' / (result['experiment_id'] + '.json'), result)
             write_json(output.with_suffix('.holdout.json'), holdout)
             text = ['# 因子搜索结果', '', '状态：' + result['status'], '',
-                    '数据：' + cfg['mode'] + '；目标：下一交易日10:00到再下一交易日10:00', '',
+                    '数据：' + cfg['mode'] + '；目标：'+cfg['prediction_target']['name'], '',
                     '尝试公式 %d 个，训练期筛选后验证 %d 个；未自动启用策略。' % (count, shortlist), '',
                     '训练/验证/留出区间：' + str(result['split']), '',
                     '胜出公式：`' + str(winner['expression']) + '`', '',

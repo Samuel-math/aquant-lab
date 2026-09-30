@@ -47,13 +47,13 @@ def assess(snapshot,now):
         body+='观察期：'+p['start']+' 至 '+p['end_exclusive']+'（不含结束日）。\n'
         body+='试验：'+p.get('trial_id','legacy24')+'；以本试验新计划为准，旧试验计划不再执行。\n'
         if plan:
-            deadline=dt.datetime.fromisoformat(plan['execution_date']+'T09:30:00+08:00')
-            body+='\n'+('下次模拟计划' if now<deadline else '以下计划已过通知截止时间，仅供复盘，不可追单')+'：'+plan['execution_date']+' 10:00（北京时间）\n'
+            deadline=dt.datetime.fromisoformat(plan['execution_date']+'T'+plan.get('notification_deadline','09:30:00')+'+08:00')
+            body+='\n'+('下次模拟计划' if now<deadline else '以下计划已过通知截止时间，仅供复盘，不可追单')+'：'+plan['execution_date']+' '+plan.get('execution_schedule','10:00')+'（北京时间）\n'
             body+='计划冻结于：'+plan['frozen_at']+'\n'
             for o in plan['orders']:
                 body+='%s %s %s，%d股，参考收盘价%.2f元\n'%(o['side'],o['symbol'],o['name'],o['qty'],o['reference_price'])
             if not plan['orders']: body+='无调仓。\n'
-            body+='10:00价相对参考价偏离超过%.1f%%则取消该单；另有停牌、涨跌停、现金和成交容量限制。\n'%(100*plan['max_price_deviation'])
+            body+='执行时点价格相对参考价偏离超过%.1f%%则取消该单；另有停牌、涨跌停、现金和成交容量限制。\n'%(100*plan['max_price_deviation'])
         else: body+='\n无新的模拟交易计划。\n'
         body+='\n'+'\n'.join(p['limitations'])
     return {'key':key,'kind':kind,'to':'2711543085@qq.com','from':'samuelzhaomath@gmail.com','subject':subject,

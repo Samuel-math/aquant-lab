@@ -7,7 +7,7 @@ from .core import ValidationError
 FIELDS = ['date', 'symbol', 'timestamp', 'price', 'volume', 'tradable']
 
 
-def read_quotes(path, calendar):
+def read_quotes(path, calendar, execution_time='10:00:00'):
     quotes = {}
     if not path.exists():
         return quotes
@@ -19,9 +19,9 @@ def read_quotes(path, calendar):
             date, symbol = row['date'], row['symbol']
             timestamp = dt.datetime.fromisoformat(row['timestamp'])
             if (date not in calendar or timestamp.date().isoformat() != date
-                    or timestamp.time() != dt.time(10, 0)
+                    or timestamp.time() != dt.time.fromisoformat(execution_time)
                     or timestamp.utcoffset() != dt.timedelta(hours=8)):
-                raise ValidationError('执行观测必须为交易日10:00:00+08:00，不能混用分钟开始/结束时间')
+                raise ValidationError('执行观测必须为交易日'+execution_time+'+08:00，不能混用分钟开始/结束时间')
             price, volume = float(row['price']), float(row['volume'])
             if not math.isfinite(price) or price <= 0 or not math.isfinite(volume) or volume < 0:
                 raise ValidationError('10:00价格或前一分钟成交量非法')

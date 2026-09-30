@@ -13,13 +13,42 @@ TARGET = {
     "price_convention": "last_trade_at_or_before_1000",
 }
 
+MORNING_TARGET = {
+    'name':'next_0940_to_following_open', 'signal_time':'after_close',
+    'entry_session_offset':1, 'exit_session_offset':2,
+    'entry_time':'09:40:00', 'exit_time':'09:30:00', 'timezone':'Asia/Shanghai',
+    'entry_price_convention':'unadjusted_5min_close_ending_0940',
+    'exit_price_convention':'daily_open_proxy_not_guaranteed_0930_fill',
+}
+
+
+def morning(cfg):
+    return cfg.get('prediction_target') == MORNING_TARGET
+
+
+def execution_quote(data, cfg, date, symbol, side):
+    if not morning(cfg) or side == 'BUY':
+        return data.intraday.get((date, symbol))
+    row = data.rows.get((date, symbol))
+    if row is None: return None
+    previous = [d for d in data.calendar if d < date]
+    prev = data.rows.get((previous[-1],symbol)) if previous else None
+    # No opening auction volume is available. This is an explicitly declared
+    # lagged liquidity proxy, never today's daily or 09:35/09:40 future volume.
+    volume = prev['volume']/240 if prev else 0
+    return dict(timestamp=date+'T09:30:00+08:00', price=row['open'], volume=volume,
+                tradable=not row['suspended'], volume_window_minutes=1,
+                price_basis='daily_open_proxy', volume_basis='previous_session_average_minute_proxy')
+
 
 def validate_target(cfg):
-    if cfg.get("prediction_target") != TARGET:
-        raise ValidationError("prediction_target 必须为 T 日收盘后预测 T+1 10:00至 T+2 10:00收益")
+    if cfg.get('prediction_target') not in (TARGET, MORNING_TARGET):
+        raise ValidationError('未知预测目标，不能静默混用执行时间')
+    if morning(cfg) and (not cfg['strategy'].get('liquidate_daily') or cfg.get('plan_deadline')!='09:00:00'):
+        raise ValidationError('09:40至次日开盘目标要求每日先卖后买及09:00计划截止')
 
 
-def forward_label(data, symbol, signal_date, asof):
+def forward_label(data, symbol, signal_date, asof, cfg=None):
     """Gross price label plus execution flags, retained even if future untradable.
 
     Daily files are available after close, so availability is conservatively
@@ -42,8 +71,9 @@ def forward_label(data, symbol, signal_date, asof):
         result["status"] = "missing_security"
         result["execution_flags"] = ["证券在未来快照中缺失，保留记录，不按零收益填充"]
         return result
-    entry_quote = data.intraday.get((entry_date, symbol))
-    exit_quote = data.intraday.get((exit_date, symbol))
+    cfg = cfg or {'prediction_target':TARGET}
+    entry_quote = execution_quote(data,cfg,entry_date,symbol,'BUY')
+    exit_quote = execution_quote(data,cfg,exit_date,symbol,'SELL')
     if entry_quote is None or exit_quote is None:
         result["status"] = "missing_execution_quote"
         return result
@@ -93,7 +123,7 @@ def build_dataset(data, cfg, asof):
     for date in days:
         # Eligibility and features are evaluated at T only.
         for item in rank(data, date, cfg):
-            row = forward_label(data, item["symbol"], date, asof)
+            row = forward_label(data, item["symbol"], date, asof,cfg)
             row["features"] = {k: item[k] for k in ("momentum", "low_volatility", "liquidity")}
             rows.append(row)
     counts = {}
@@ -102,7 +132,7 @@ def build_dataset(data, cfg, asof):
     return {"target": cfg["prediction_target"], "mode": cfg["mode"], "asof": asof,
             "config_hash": digest(cfg), "data_hash": data.version, "code_hash": code_hash(),
             "status_counts": counts, "rows": rows,
-            "limitations": ["标签是10:00到10:00毛价格收益，不是成交或净收益保证",
+            "limitations": ["标签是所配置进出时点的毛价格收益，不是成交或净收益保证",
                             "成本须结合仓位数量、费用、滑点在策略回测中计算",
                             "涨跌停与无法交易记录保留，不按未来可交易性筛掉困难样本",
                             "公司行动、未来证券缺失、停牌记录没有可用标签，须单独审计覆盖率",
