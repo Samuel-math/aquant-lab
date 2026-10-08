@@ -13,6 +13,7 @@ from pathlib import Path
 TZ=dt.timezone(dt.timedelta(hours=8))
 ROOT=Path(__file__).resolve().parents[1]/'artifacts/local-monitor'
 TRIALS=ROOT.parent
+ACTIVE_LOCAL_ROOT=TRIALS/'local-pool188-morning-v1-20261009'
 
 
 def read_local_snapshot(root):
@@ -56,6 +57,22 @@ def assess(snapshot,now):
                 issues.append(key+'状态异常或日期不一致')
         cycle=files.get('cycle') or {}
         if cycle.get('paper') != p: issues.append('日报尚未完成完整发布')
+        if snapshot.get('source')=='local':
+            protocol=files.get('protocol') or {}
+            config=protocol.get('config') or {}
+            if config.get('trial_id')!=p.get('trial_id') or config.get('prediction_target',{}).get('name')!='next_0940_to_following_open':
+                issues.append('本机协议、试验身份或预测目标不一致')
+            plan=p.get('next_plan')
+            if plan:
+                future=[date for date in calendar if date>p['asof']]
+                if not future or plan.get('execution_date')!=future[0]:
+                    issues.append('下次计划日期不是下一交易日')
+                else:
+                    limit=dt.datetime.fromisoformat(plan['execution_date']+'T'+config.get('plan_deadline','09:00:00')+'+08:00')
+                    try:
+                        if dt.datetime.fromisoformat(plan['frozen_at'])>=limit:
+                            issues.append('计划冻结晚于截止时间')
+                    except (KeyError,ValueError): issues.append('计划冻结时间缺失或无效')
     if issues:
         location='本地任务和数据' if snapshot.get('source')=='local' else '服务器'
         kind='alert'; body='AQuant Lab 巡检异常：\n'+'\n'.join(issues)+'\n请检查'+location+'。此次不提供可执行的新买卖计划。'
@@ -107,8 +124,8 @@ def main():
         pointer=ROOT/'active-local-root.txt'
         if pointer.exists():
             active=Path(pointer.read_text(encoding='utf-8').strip()).resolve()
-            if TRIALS.resolve() not in active.parents:
-                raise ValueError('Local trial must be under artifacts')
+            if active!=ACTIVE_LOCAL_ROOT.resolve():
+                raise ValueError('Local trial pointer does not match audited active trial')
             snapshot=read_local_snapshot(active)
         else:
             cmd=['ssh','-i',str(Path.home()/'.ssh/aquant_monitor_ed25519'),'-o','IdentitiesOnly=yes','-o','BatchMode=yes',
@@ -119,7 +136,7 @@ def main():
         envelope=assess(snapshot,now)
     except (subprocess.SubprocessError,ValueError,KeyError,TypeError,OSError) as error:
         envelope={'key':'monitor-error-'+type(error).__name__,'kind':'alert','to':'2711543085@qq.com','from':'samuelzhaomath@gmail.com',
-                  'subject':'[巡检异常] AQuant Lab 读取失败','html':'<p>无法验证服务器最新日报，请检查连接和报告格式；不发送旧的交易计划。错误类型：'+type(error).__name__+'</p>'}
+                  'subject':'[巡检异常] AQuant Lab 读取失败','html':'<p>无法验证当前试验最新日报，请检查数据来源和报告格式；不发送旧的交易计划。错误类型：'+type(error).__name__+'</p>'}
     health_path=ROOT/'health.json'
     prior=json.loads(health_path.read_text()) if health_path.exists() else {}
     category=envelope['key'] if envelope['kind']=='alert' else 'healthy'

@@ -2,13 +2,15 @@
 """Read-only activation audit for the isolated 188-stock local paper trial."""
 import datetime as dt
 import json
+import sys
 from pathlib import Path
 
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
 from aquant.core import code_hash, digest, read_config
 from aquant.data import CSVData
 from aquant.paper import deadline
 
-REPO = Path(__file__).resolve().parents[1]
 TRIAL = REPO / 'artifacts/local-pool188-morning-v1-20261009'
 CONFIG = REPO / 'configs/paper-pool188-morning-local-v1.json'
 

@@ -47,6 +47,9 @@ class MonitorTests(unittest.TestCase):
             root=Path(tmp)
             for relative,value in {
                 'paper/latest.json':self.paper,
+                'paper/protocol.json':{'config':{'trial_id':'local-test',
+                    'prediction_target':{'name':'next_0940_to_following_open'},
+                    'plan_deadline':'09:00:00'}},
                 'rolling-real/cycle.json':{'paper':self.paper},
                 'rolling-real/status.json':{'status':'ok','date':'2026-09-28'},
                 'real/sync.status.json':{'status':'ok','date':'2026-09-28'},
@@ -56,6 +59,18 @@ class MonitorTests(unittest.TestCase):
             calendar=root/'real/dataset/calendar.csv'
             calendar.parent.mkdir(parents=True,exist_ok=True)
             calendar.write_text('date\n2026-09-28\n2026-09-29\n2026-09-30\n',encoding='utf-8')
+            self.paper['trial_id']='local-test'
+            self.paper['next_plan']['frozen_at']='2026-09-28T20:10:00+08:00'
+            (root/'paper/latest.json').write_text(json.dumps(self.paper),encoding='utf-8')
+            (root/'rolling-real/cycle.json').write_text(json.dumps({'paper':self.paper}),encoding='utf-8')
             snapshot=read_local_snapshot(root)
             self.assertEqual(snapshot['source'],'local')
             self.assertEqual(assess(snapshot,self.now)['kind'],'report')
+            snapshot['files']['paper']['next_plan']['execution_date']='2026-09-30'
+            snapshot['files']['cycle']['paper']['next_plan']['execution_date']='2026-09-30'
+            self.assertEqual(assess(snapshot,self.now)['kind'],'alert')
+            snapshot['files']['paper']['next_plan']['execution_date']='2026-09-29'
+            snapshot['files']['cycle']['paper']['next_plan']['execution_date']='2026-09-29'
+            snapshot['files']['paper']['next_plan']['frozen_at']='2026-09-29T09:01:00+08:00'
+            snapshot['files']['cycle']['paper']['next_plan']['frozen_at']='2026-09-29T09:01:00+08:00'
+            self.assertEqual(assess(snapshot,self.now)['kind'],'alert')

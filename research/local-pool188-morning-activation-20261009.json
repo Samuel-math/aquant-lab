@@ -1,0 +1,27 @@
+{
+  "trial_id": "pool188-morning-local-v1-20261009",
+  "asof": "2026-10-08",
+  "active_stocks": 188,
+  "quoted_stocks": 188,
+  "checks": {
+    "trial_id": true,
+    "pool_hash": true,
+    "stock_count": true,
+    "active_quote_coverage": true,
+    "quote_time": true,
+    "prediction_target": true,
+    "candidate_count": true,
+    "prediction_prospective": true,
+    "protocol_config_hash": true,
+    "protocol_code_hash": true,
+    "empty_start": true,
+    "next_plan": true,
+    "plan_frozen_early": true,
+    "complete_cycle": true
+  },
+  "passed": true,
+  "data_hash": "ce272705bd4f58072f30c120a7ff58e3b89ffc00d829f694bdc9d97227e02e9f",
+  "code_hash": "0c12fcb716c0432fbc9317d2db02533ff47d2817b3f55c5f8e4a28cd1392be9d",
+  "plan_date": "2026-10-09",
+  "audited_at": "2026-10-08T17:13:31.584073+00:00"
+}
