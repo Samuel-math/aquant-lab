@@ -7,7 +7,7 @@ from pathlib import Path
 from aquant.core import read_config, ValidationError
 from aquant.data import CSVData, generate_demo
 from aquant.mining import prepare
-from aquant.rolling import fit_and_predict, validate_prediction, update_rolling
+from aquant.rolling import binary_evaluation, fit_and_predict, recent_binary_summary, validate_prediction, update_rolling
 from aquant.baostock_source import extract_1000, merge_revision, main_board, load_pool
 from aquant.storage import admission
 
@@ -74,6 +74,41 @@ class RollingSourceTests(unittest.TestCase):
         scored=validate_prediction(self.data,saved,self.data.calendar[162])
         self.assertEqual(scored['model_id'],saved['model_id'])
         self.assertIsNotNone(scored['rank_ic'])
+        self.assertEqual(set(scored['binary_metrics']), {'gt_1pct','gt_3pct','gt_5pct'})
+
+    def test_threshold_auc_uses_ties_and_strictly_greater_label(self):
+        rows=[{'symbol':str(i),'rank':i,'status':'observed','score':score,
+               'gross_return':gross} for i,(score,gross) in enumerate(
+                   [(0.9,0.06),(0.8,0.04),(0.8,0.03),(0.1,0.00)],1)]
+        result=binary_evaluation(rows,0.03)
+        self.assertEqual(result['positive_count'],2)
+        self.assertEqual(result['negative_count'],2)  # Exactly 3% is negative.
+        self.assertAlmostEqual(result['auc'],0.875)  # Tied score receives half credit.
+        self.assertEqual(result['base_rate'],0.5)
+        self.assertEqual(result['top10_hit_rate'],0.5)
+        self.assertIsNone(binary_evaluation(rows,0.06)['auc'])
+
+    def test_missing_top10_label_does_not_promote_rank_11(self):
+        rows=[{'symbol':str(i),'rank':i,'status':'observed','score':12-i,
+               'gross_return':0.02 if i in (2,11) else 0.0} for i in range(1,12)]
+        rows[0].update(status='missing_execution_quote',gross_return=None)
+        result=binary_evaluation(rows,0.01)
+        self.assertEqual((result['top10_requested'],result['top10_observed'],result['top10_hits']),
+                         (10,9,1))
+        self.assertAlmostEqual(result['top10_hit_rate'],1/9)
+        self.assertEqual(result['observed_count'],10)
+
+    def test_recent_summary_keeps_older_evaluations_unchanged(self):
+        metric=binary_evaluation([
+            {'symbol':'A','rank':1,'status':'observed','score':1,'gross_return':0.02},
+            {'symbol':'B','rank':2,'status':'observed','score':0,'gross_return':0.00},
+        ],0.01)
+        summary=recent_binary_summary([{'rank_ic':0.1},
+                                       {'binary_metrics':{'gt_1pct':metric}}])
+        self.assertEqual(summary['gt_1pct']['evaluated_days'],1)
+        self.assertEqual(summary['gt_1pct']['mean_daily_auc'],1.0)
+        self.assertEqual(summary['gt_1pct']['pooled_base_rate'],0.5)
+        self.assertEqual(summary['gt_3pct']['evaluated_days'],0)
 
     def test_saved_predictions_are_immutable_and_idempotent(self):
         with tempfile.TemporaryDirectory() as tmp:

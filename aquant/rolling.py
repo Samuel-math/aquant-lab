@@ -9,6 +9,44 @@ from .mining import candidates, prepare, mean_ic, evaluate_expression, centered_
 from .operations import lock, status
 from .targets import forward_label
 
+RETURN_THRESHOLDS = {'gt_1pct': 0.01, 'gt_3pct': 0.03, 'gt_5pct': 0.05}
+
+
+def binary_evaluation(outcomes, threshold):
+    """Evaluate frozen scores; missing labels never promote lower ranks into top 10."""
+    observed = [r for r in outcomes if r['status'] == 'observed' and r['gross_return'] is not None]
+    positive = [r['score'] for r in observed if r['gross_return'] > threshold]
+    negative = [r['score'] for r in observed if r['gross_return'] <= threshold]
+    auc = (sum((p > n) + 0.5 * (p == n) for p in positive for n in negative)
+           / (len(positive) * len(negative)) if positive and negative else None)
+    top = sorted(outcomes, key=lambda r: (r['rank'], r['symbol']))[:10]
+    top_observed = [r for r in top if r['status'] == 'observed' and r['gross_return'] is not None]
+    top_hits = sum(r['gross_return'] > threshold for r in top_observed)
+    return {'threshold': threshold, 'auc': auc, 'positive_count': len(positive),
+            'negative_count': len(negative), 'observed_count': len(observed),
+            'base_rate': len(positive) / len(observed) if observed else None,
+            'top10_hits': top_hits, 'top10_observed': len(top_observed),
+            'top10_requested': len(top),
+            'top10_hit_rate': top_hits / len(top_observed) if top_observed else None}
+
+
+def recent_binary_summary(evaluations):
+    result = {}
+    for name, threshold in RETURN_THRESHOLDS.items():
+        rows = [r['binary_metrics'][name] for r in evaluations if name in r.get('binary_metrics', {})]
+        aucs = [r['auc'] for r in rows if r['auc'] is not None]
+        observed = sum(r['observed_count'] for r in rows)
+        positives = sum(r['positive_count'] for r in rows)
+        top_observed = sum(r['top10_observed'] for r in rows)
+        hits = sum(r['top10_hits'] for r in rows)
+        result[name] = {'threshold': threshold, 'evaluated_days': len(rows),
+                        'auc_defined_days': len(aucs),
+                        'mean_daily_auc': statistics.mean(aucs) if aucs else None,
+                        'pooled_base_rate': positives / observed if observed else None,
+                        'pooled_top10_hit_rate': hits / top_observed if top_observed else None,
+                        'top10_hits': hits, 'top10_observed': top_observed}
+    return result
+
 
 def _init_fit(features, train):
     global _fit_features, _fit_train
@@ -72,7 +110,10 @@ def validate_prediction(data, saved, asof):
             'provenance': saved['provenance'], 'rank_ic': ic,
             'top4_gross_return': statistics.mean(top) if top else None,
             'coverage': len(observed) / len(outcomes), 'outcomes': outcomes,
-            'metric_type': 'factor_diagnostic_not_net_portfolio_return'}
+            'binary_metrics': {name: binary_evaluation(outcomes, threshold)
+                               for name, threshold in RETURN_THRESHOLDS.items()},
+            'metric_type': 'factor_diagnostic_not_net_portfolio_return',
+            'evaluation_schema_version': 'threshold_auc_top10_v1'}
 
 
 def update_rolling(data, cfg, asof, directory, replay_days=0, count=24, seed=17, max_seconds=600, workers=1):
@@ -122,11 +163,13 @@ def update_rolling(data, cfg, asof, directory, replay_days=0, count=24, seed=17,
             result = {'asof': asof, 'mode': cfg['mode'], 'new_prediction_dates': created,
                       'new_evaluation_dates': new_evaluations, 'prediction_count': len(list(predictions_dir.glob('*.json'))),
                       'evaluation_count': len(evaluated), 'recent_mean_rank_ic': statistics.mean(values) if values else None,
+                      'recent_binary_metrics': recent_binary_summary(recent),
                       'prospective_evaluation_count': sum(r['provenance']=='prospective' for r in evaluated),
                       'historical_replay_evaluation_count': sum(r['provenance']=='historical_replay' for r in evaluated),
                       'latest_predictions': str(predictions_dir / (asof + '.json')),
                       'limitations': ['历史顺序回放不是部署后的真实前向验证，分开计数',
                                       'Rank IC和前四名毛收益是因子诊断，不是扣成本的账户收益',
+                                      '阈值AUC单类日期为null；Top10缺失标签不以后续排名补位，按可观测数量计算命中率',
                                       '每天先评价已冻结预测，再吸收新成熟标签训练下一版',
                                       '尚未进行多重检验修正；不自动下单或提升正式策略']}
             write_json(directory / 'latest.json', result)
