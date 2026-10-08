@@ -1,0 +1,50 @@
+{
+  "mode": "live",
+  "initial_cash": 10000,
+  "fees": {
+    "label": "真实行情研究的假设费用，待按券商核实",
+    "commission_rate": 0.0003,
+    "minimum_commission": 5,
+    "sell_stamp_tax_rate": 0.0005,
+    "transfer_fee_rate": 1e-05,
+    "slippage_bps": 10
+  },
+  "strategy": {
+    "name": "research-only-not-approved",
+    "weights": {
+      "momentum": 0.4,
+      "low_volatility": 0.3,
+      "liquidity": 0.3
+    },
+    "lookback": 20,
+    "holdings": 4,
+    "exit_rank": 6,
+    "max_weight": 0.25,
+    "cash_reserve": 0.05,
+    "min_listing_days": 120,
+    "min_amount": 10000000,
+    "min_order_value": 1000,
+    "max_price_deviation": 0.03,
+    "max_participation": 0.01,
+    "liquidate_daily": true
+  },
+  "prediction_target": {
+    "name": "next_0940_to_following_open",
+    "signal_time": "after_close",
+    "entry_session_offset": 1,
+    "exit_session_offset": 2,
+    "entry_time": "09:40:00",
+    "exit_time": "09:30:00",
+    "timezone": "Asia/Shanghai",
+    "entry_price_convention": "unadjusted_5min_close_ending_0940",
+    "exit_price_convention": "daily_open_proxy_not_guaranteed_0930_fill"
+  },
+  "approved_strategy": false,
+  "trial_id": "pool188-morning-local-v1-20261009",
+  "pool_hash": "a84820aa70ce05cfe550a9ffe329bf6a3f1eed74983e5dcce136e9fc859a815a",
+  "pool_version": "2.1",
+  "universe_description": "188只V2.1沪深主板研究底池；选池日前历史仅用于训练；非全市场",
+  "plan_deadline": "09:00:00",
+  "minute_history_start": "2026-01-01",
+  "execution_description": "09:30以未复权开盘价近似卖出，09:40以5分钟线收盘价近似买入；开盘容量采用前日每分钟均量假设，并非实际集合竞价成交"
+}

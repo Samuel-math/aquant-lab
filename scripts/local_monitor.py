@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Read server reports with a restricted SSH key; prepare deduplicated Gmail notices."""
 import argparse
+import csv
 import datetime as dt
 import hashlib
 import html
@@ -11,16 +12,37 @@ from pathlib import Path
 
 TZ=dt.timezone(dt.timedelta(hours=8))
 ROOT=Path(__file__).resolve().parents[1]/'artifacts/local-monitor'
+TRIALS=ROOT.parent
+
+
+def read_local_snapshot(root):
+    """Read the same allowlisted report shape as the restricted SSH exporter."""
+    files={}
+    for name,relative in {'paper':'paper/latest.json','protocol':'paper/protocol.json',
+                          'cycle':'rolling-real/cycle.json','rolling':'rolling-real/status.json',
+                          'sync':'real/sync.status.json'}.items():
+        path=root/relative
+        try:
+            if path.stat().st_size>2_000_000: raise ValueError('oversized report')
+            files[name]=json.loads(path.read_text(encoding='utf-8'))
+        except (OSError,ValueError): files[name]=None
+    try:
+        with (root/'real/dataset/calendar.csv').open(newline='',encoding='utf-8') as stream:
+            calendar=[row['date'] for row in csv.DictReader(stream)]
+    except (OSError,KeyError): calendar=[]
+    return {'source':'local','files':files,'calendar':calendar,
+            'writing':(root/'real/dataset/.writing').exists()}
 
 
 def assess(snapshot,now):
     files=snapshot['files']; p=files.get('paper'); issues=[]
     if snapshot.get('writing'): issues.append('行情正在写入，本次不发送交易计划')
-    scheduler=files.get('scheduler') or {}
-    stamp=scheduler.get('checked_at')
-    if not stamp or (now-dt.datetime.fromisoformat(stamp)).total_seconds()>180:
-        issues.append('服务器调度心跳失效')
-    if scheduler.get('result')=='failed': issues.append('最近一次每日任务失败')
+    if snapshot.get('source')!='local':
+        scheduler=files.get('scheduler') or {}
+        stamp=scheduler.get('checked_at')
+        if not stamp or (now-dt.datetime.fromisoformat(stamp)).total_seconds()>180:
+            issues.append('服务器调度心跳失效')
+        if scheduler.get('result')=='failed': issues.append('最近一次每日任务失败')
     if not p: issues.append('模拟日报缺失')
     calendar=snapshot.get('calendar',[])
     cutoff=now.date() if now.hour>=20 else now.date()-dt.timedelta(days=1)
@@ -35,7 +57,8 @@ def assess(snapshot,now):
         cycle=files.get('cycle') or {}
         if cycle.get('paper') != p: issues.append('日报尚未完成完整发布')
     if issues:
-        kind='alert'; body='AQuant Lab 巡检异常：\n'+'\n'.join(issues)+'\n请检查服务器。此次不提供可执行的新买卖计划。'
+        location='本地任务和数据' if snapshot.get('source')=='local' else '服务器'
+        kind='alert'; body='AQuant Lab 巡检异常：\n'+'\n'.join(issues)+'\n请检查'+location+'。此次不提供可执行的新买卖计划。'
         key='alert-'+hashlib.sha256(json.dumps(issues,ensure_ascii=False).encode()).hexdigest()[:20]
         subject='[巡检异常] AQuant Lab'
     else:
@@ -80,11 +103,18 @@ def main():
         if n!=1: raise SystemExit('No pending delivery found')
         print(json.dumps({'recorded':True})); return
     now=dt.datetime.now(TZ)
-    cmd=['ssh','-i',str(Path.home()/'.ssh/aquant_monitor_ed25519'),'-o','IdentitiesOnly=yes','-o','BatchMode=yes',
-         '-o','ControlPath=none','-o','StrictHostKeyChecking=yes','-o','ConnectTimeout=10','-p','45626','root@connect.bjb1.seetacloud.com']
     try:
-        p=subprocess.run(cmd,capture_output=True,text=True,timeout=25,check=True)
-        snapshot=json.loads(p.stdout)
+        pointer=ROOT/'active-local-root.txt'
+        if pointer.exists():
+            active=Path(pointer.read_text(encoding='utf-8').strip()).resolve()
+            if TRIALS.resolve() not in active.parents:
+                raise ValueError('Local trial must be under artifacts')
+            snapshot=read_local_snapshot(active)
+        else:
+            cmd=['ssh','-i',str(Path.home()/'.ssh/aquant_monitor_ed25519'),'-o','IdentitiesOnly=yes','-o','BatchMode=yes',
+                 '-o','ControlPath=none','-o','StrictHostKeyChecking=yes','-o','ConnectTimeout=10','-p','45626','root@connect.bjb1.seetacloud.com']
+            p=subprocess.run(cmd,capture_output=True,text=True,timeout=25,check=True)
+            snapshot=json.loads(p.stdout)
         (ROOT/'snapshot.json').write_text(json.dumps(snapshot,ensure_ascii=False,indent=2))
         envelope=assess(snapshot,now)
     except (subprocess.SubprocessError,ValueError,KeyError,TypeError,OSError) as error:

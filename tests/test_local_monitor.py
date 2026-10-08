@@ -1,7 +1,10 @@
 import copy
 import datetime as dt
+import json
+import tempfile
 import unittest
-from scripts.local_monitor import assess, TZ
+from pathlib import Path
+from scripts.local_monitor import assess, read_local_snapshot, TZ
 
 
 class MonitorTests(unittest.TestCase):
@@ -38,3 +41,21 @@ class MonitorTests(unittest.TestCase):
             if change=='mismatch': s['files']['cycle']={}
             r=assess(s,self.now)
             self.assertEqual(r['kind'],'alert'); self.assertNotIn('600000.SH',r['html'])
+
+    def test_local_reports_need_no_server_heartbeat(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            for relative,value in {
+                'paper/latest.json':self.paper,
+                'rolling-real/cycle.json':{'paper':self.paper},
+                'rolling-real/status.json':{'status':'ok','date':'2026-09-28'},
+                'real/sync.status.json':{'status':'ok','date':'2026-09-28'},
+            }.items():
+                path=root/relative;path.parent.mkdir(parents=True,exist_ok=True)
+                path.write_text(json.dumps(value),encoding='utf-8')
+            calendar=root/'real/dataset/calendar.csv'
+            calendar.parent.mkdir(parents=True,exist_ok=True)
+            calendar.write_text('date\n2026-09-28\n2026-09-29\n2026-09-30\n',encoding='utf-8')
+            snapshot=read_local_snapshot(root)
+            self.assertEqual(snapshot['source'],'local')
+            self.assertEqual(assess(snapshot,self.now)['kind'],'report')
