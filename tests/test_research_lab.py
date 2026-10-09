@@ -44,6 +44,37 @@ class ResearchLabTests(unittest.TestCase):
         self.assertEqual(dates, ['2026-10-01', '2026-10-03'])
         self.assertEqual(rows['date'].tolist(), dates)
 
+    def test_all_learned_models_use_strict_binary_label_and_positive_probability(self):
+        try:
+            import pandas as pd
+            from research_lab.models import binary_target, fit_models, positive_scores
+        except ModuleNotFoundError:
+            self.skipTest('Optional research model dependencies are not installed')
+        frame = pd.DataFrame({
+            'gross_return': [-0.02, 0.01, 0.011, 0.04] * 100,
+            'factor': [0.1, 0.2, 0.7, 0.9] * 100,
+        })
+        self.assertEqual(binary_target(frame).iloc[:4].tolist(), [0, 0, 1, 1])
+        models, positive_rate = fit_models(frame, ['factor'])
+        self.assertEqual(set(models), {'logistic', 'lightgbm'})
+        self.assertAlmostEqual(positive_rate, 0.5)
+        for model in models.values():
+            scores = positive_scores(model, frame[['factor']])
+            self.assertEqual(len(scores), len(frame))
+            self.assertTrue(all(0 <= score <= 1 for score in scores))
+            self.assertGreater(scores[2], scores[0])
+
+    def test_binary_training_rejects_single_class_or_missing_return(self):
+        try:
+            import pandas as pd
+            from research_lab.models import binary_target
+        except ModuleNotFoundError:
+            self.skipTest('Optional research model dependencies are not installed')
+        with self.assertRaisesRegex(ValueError, 'only one class'):
+            binary_target(pd.DataFrame({'gross_return': [0.0, 0.01]}))
+        with self.assertRaisesRegex(ValueError, 'missing gross returns'):
+            binary_target(pd.DataFrame({'gross_return': [0.0, None, 0.02]}))
+
     def test_incremental_summary_keeps_history_and_journals_revision(self):
         old = [{'date': '2026-10-08', 'symbol': '600000.SH', 'first10_volume_share': .1}]
         incoming = [{'date': '2026-10-08', 'symbol': '600000.SH', 'first10_volume_share': .2},

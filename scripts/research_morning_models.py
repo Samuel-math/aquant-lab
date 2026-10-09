@@ -46,7 +46,7 @@ def main():
     parser.add_argument('--evaluation-start', default='2026-07-01')
     parser.add_argument('--minute-summary', help='Optional complete 5-minute daily feature summaries')
     parser.add_argument('--skip-formula-baseline', action='store_true')
-    parser.add_argument('--output', default=str(ROOT / 'artifacts/research-morning-models-v1'))
+    parser.add_argument('--output', default=str(ROOT / 'artifacts/research-morning-classification-v1'))
     args = parser.parse_args()
     out = Path(args.output)
     if out.resolve() == (ROOT / 'artifacts/local-pool188-morning-v1-20261009').resolve() or \
@@ -100,11 +100,14 @@ def main():
                         'net_backtest': net_backtests(data, cfg, predictions, segment[0], segment[-1])}
     code_hash = hashlib.sha256(b''.join(p.name.encode() + p.read_bytes() for p in
                        [*sorted((ROOT / 'research_lab').glob('*.py')), Path(__file__)])).hexdigest()
-    report = {'version': 'morning-model-research-v2' if summary_path else 'morning-model-research-v1',
+    report = {'version': 'morning-model-classification-v1-minute' if summary_path else 'morning-model-classification-v1-core',
               'status': 'research_only_not_deployed',
               'asof': asof, 'selection_date': selection_date,
               'target': cfg['prediction_target'], 'data_hash': data.version,
               'research_code_hash': code_hash, 'features': list(feature_columns),
+              'score_meaning': {'logistic': 'P(gross_return_strictly_above_1pct)',
+                                'lightgbm': 'P(gross_return_strictly_above_1pct)',
+                                'frozen_24_formula': 'formula_rank_score_not_probability'},
               'minute_summary': str(summary_path) if summary_path else None,
               'models': MODEL_SETTINGS, 'fit_count': len(fits), 'last_fit': fits[-1],
               'formula_fit_count': len(formula_fits),

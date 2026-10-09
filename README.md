@@ -120,7 +120,7 @@ asof应使用 sync 输出的实际最新交易日。sync只长期保存日线、
 
 详见[模拟组合与通知配置](docs/PAPER.md)。本机worker顺序生成真实行情、滚动训练结果和模拟账本；本地巡检通过Gmail插件发送日报，SMTP当前禁用。模拟与实际账户分离。188只V2.1独立试验的启用状态和切换证据见[版本记录](docs/SELECTION_CHANGELOG.md)。
 
-更丰富的分钟量价特征、Ridge和LightGBM目前仅在[独立模型研究](docs/MODEL_RESEARCH_V1.md)中比较，尚未改变每日模拟信号。
+更丰富的分钟量价特征与逻辑回归、LightGBM二分类目前仅在[独立模型研究V2](docs/MODEL_RESEARCH_V2.md)中比较，尚未改变每日模拟信号。此前的Ridge和LightGBM回归结果保留在[研究V1](docs/MODEL_RESEARCH_V1.md)。
 
 ## 188只研究底池
 

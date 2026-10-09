@@ -14,7 +14,7 @@ from aquant.operations import lock
 
 PYTHON = ROOT / '.venv-research/bin/python'
 DATASET = ROOT / 'data/local-pool188-morning-v1-20261009/dataset'
-OUTPUT = ROOT / 'artifacts/research-shadow-v1'
+OUTPUT = ROOT / 'artifacts/research-shadow-v2'
 
 
 def call(*parts, timeout=1800):

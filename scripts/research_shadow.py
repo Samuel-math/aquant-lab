@@ -20,7 +20,7 @@ from aquant.targets import forward_label
 from research_lab.features import FEATURE_COLUMNS, MINUTE_FEATURE_COLUMNS, build_features
 from research_lab.formula_baseline import formula_predictions
 from research_lab.models import (MODEL_SETTINGS, SnapshotCache, attach_labels, evaluate,
-                                 make_models, mature_training_rows)
+                                 fit_models, mature_training_rows, positive_scores)
 
 
 def evaluate_frozen(data, cfg, root, asof):
@@ -81,11 +81,10 @@ def freeze(data, cfg, root, track, summary_path=None):
     current = labeled.loc[labeled['date'] == asof]
     if current.empty:
         raise ValueError('No current research features')
-    models = make_models()
+    models, train_positive_rate = fit_models(train, columns)
     scores = []
     for name, model in models.items():
-        model.fit(train[list(columns)], train['gross_return'].clip(*MODEL_SETTINGS['label_clip']))
-        rows = sorted(zip(current['symbol'], model.predict(current[list(columns)])),
+        rows = sorted(zip(current['symbol'], positive_scores(model, current[list(columns)])),
                       key=lambda x: (-x[1], x[0]))
         scores.extend({'model': name, 'symbol': symbol, 'score': float(score), 'rank': rank}
                       for rank, (symbol, score) in enumerate(rows, 1))
@@ -100,14 +99,18 @@ def freeze(data, cfg, root, track, summary_path=None):
     now = dt.datetime.now(dt.timezone(dt.timedelta(hours=8)))
     code_hash = hashlib.sha256(b''.join(p.name.encode() + p.read_bytes() for p in
                        [*sorted((ROOT / 'research_lab').glob('*.py')), Path(__file__)])).hexdigest()
-    write_json(output, {'version': 'research-shadow-v1', 'track': track,
+    write_json(output, {'version': 'research-shadow-v2-classification', 'track': track,
                         'trial_id': cfg['trial_id'], 'signal_date': asof,
                         'created_at': now.isoformat(),
                         'provenance': 'prospective' if prospective(asof, data.next_day(asof), now, cfg)
                         else 'late_replay', 'prediction_target': cfg['prediction_target'],
                         'train_signal_range': [mature_dates[0], mature_dates[-1]],
                         'train_days': len(mature_dates),
+                        'train_positive_rate': train_positive_rate,
                         'train_max_label_available_date': max(train['label_available_date']),
+                        'score_meaning': {'logistic': 'P(gross_return_strictly_above_1pct)',
+                                          'lightgbm': 'P(gross_return_strictly_above_1pct)',
+                                          'frozen_24_formula': 'formula_rank_score_not_probability'},
                         'feature_columns': list(columns), 'model_settings': MODEL_SETTINGS,
                         'formula_fit': baseline_fit[0], 'data_hash': data.version,
                         'research_code_hash': code_hash, 'scores': scores,
@@ -121,7 +124,7 @@ def main():
     parser.add_argument('--data', default=str(ROOT / 'data/local-pool188-morning-v1-20261009/dataset'))
     parser.add_argument('--config', default=str(ROOT / 'configs/paper-pool188-morning-local-v1.json'))
     parser.add_argument('--minute-summary', default=str(ROOT / 'data/research-intraday-summary-v1/daily-summary.csv'))
-    parser.add_argument('--output', default=str(ROOT / 'artifacts/research-shadow-v1'))
+    parser.add_argument('--output', default=str(ROOT / 'artifacts/research-shadow-v2'))
     args = parser.parse_args()
     data = CSVData(args.data)
     cfg = read_config(args.config)

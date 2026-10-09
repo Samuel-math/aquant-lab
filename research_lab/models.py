@@ -1,13 +1,13 @@
-"""Fixed-parameter walk-forward Ridge and LightGBM research candidates."""
+"""Fixed-parameter walk-forward binary classification research candidates."""
 from __future__ import annotations
 
 from collections import defaultdict
 
 import numpy as np
 import pandas as pd
-from lightgbm import LGBMRegressor
+from lightgbm import LGBMClassifier
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import Ridge
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
@@ -17,13 +17,13 @@ from .features import FEATURE_COLUMNS
 
 
 MODEL_SETTINGS = {
-    'ridge': {'alpha': 100.0},
+    'logistic': {'C': 0.01, 'max_iter': 500, 'solver': 'lbfgs', 'random_state': 17},
     'lightgbm': {'n_estimators': 120, 'learning_rate': 0.03, 'num_leaves': 7,
                  'max_depth': 3, 'min_child_samples': 100, 'reg_lambda': 10.0,
                  'colsample_bytree': 0.8, 'random_state': 17, 'n_jobs': 4,
                  'verbosity': -1, 'deterministic': True, 'force_col_wise': True},
     'train_days': 126, 'minimum_train_days': 60, 'retrain_every_days': 1,
-    'label_clip': [-0.2, 0.2],
+    'positive_return_strictly_above': 0.01,
 }
 
 
@@ -54,10 +54,38 @@ def attach_labels(data, cfg, frame, asof):
 
 def make_models():
     return {
-        'ridge': make_pipeline(SimpleImputer(strategy='median', add_indicator=False),
-                               StandardScaler(), Ridge(**MODEL_SETTINGS['ridge'])),
-        'lightgbm': LGBMRegressor(**MODEL_SETTINGS['lightgbm']),
+        'logistic': make_pipeline(SimpleImputer(strategy='median', add_indicator=False),
+                                  StandardScaler(), LogisticRegression(**MODEL_SETTINGS['logistic'])),
+        'lightgbm': LGBMClassifier(objective='binary', **MODEL_SETTINGS['lightgbm']),
     }
+
+
+def binary_target(train):
+    """Use only observed gross returns; threshold equality is a negative label."""
+    gross = train['gross_return']
+    if gross.isna().any():
+        raise ValueError('Observed training rows contain missing gross returns')
+    target = (gross > MODEL_SETTINGS['positive_return_strictly_above']).astype(int)
+    if target.nunique() != 2:
+        raise ValueError('Binary training window contains only one class')
+    return target
+
+
+def fit_models(train, feature_columns):
+    models = make_models()
+    x = train[list(feature_columns)]
+    y = binary_target(train)
+    for model in models.values():
+        model.fit(x, y)
+    return models, float(y.mean())
+
+
+def positive_scores(model, features):
+    """Column 1 is the strictly >1% class for both candidate classifiers."""
+    classes = model.classes_
+    if list(classes) != [0, 1]:
+        raise ValueError(f'Unexpected binary classes: {classes}')
+    return model.predict_proba(features)[:, 1]
 
 
 def mature_training_rows(frame, date):
@@ -79,22 +107,19 @@ def walk_forward(frame, evaluation_start, asof, feature_columns=FEATURE_COLUMNS)
             train, mature_dates = mature_training_rows(frame, date)
             if len(mature_dates) < MODEL_SETTINGS['minimum_train_days']:
                 continue
-            x = train[list(feature_columns)]
-            y = train['gross_return'].clip(*MODEL_SETTINGS['label_clip'])
-            models = make_models()
-            for model in models.values():
-                model.fit(x, y)
+            models, positive_rate = fit_models(train, feature_columns)
             last_fit_index = index
             fits.append({'trained_at': date, 'train_start': mature_dates[0],
                          'train_end': mature_dates[-1],
                          'max_label_available_date': max(train['label_available_date']),
-                         'train_days': len(mature_dates), 'samples': len(train)})
+                         'train_days': len(mature_dates), 'samples': len(train),
+                         'train_positive_rate': positive_rate})
         current = frame.loc[frame['date'] == date]
         if current.empty or models is None:
             continue
         x = current[list(feature_columns)]
         for model_name, model in models.items():
-            scores = model.predict(x)
+            scores = positive_scores(model, x)
             for (_, row), score in zip(current.iterrows(), scores):
                 predictions.append({'date': date, 'symbol': row['symbol'],
                                     'model': model_name, 'score': float(score),

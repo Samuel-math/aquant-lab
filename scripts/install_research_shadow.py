@@ -23,12 +23,12 @@ def main():
         'StartCalendarInterval': [{'Hour': 23, 'Minute': 30},
                                   {'Hour': 6, 'Minute': 30}],
         'RunAtLoad': False,
-        'StandardOutPath': str(ROOT / 'artifacts/research-shadow-v1/launchd.out.log'),
-        'StandardErrorPath': str(ROOT / 'artifacts/research-shadow-v1/launchd.err.log'),
+        'StandardOutPath': str(ROOT / 'artifacts/research-shadow-v2/launchd.out.log'),
+        'StandardErrorPath': str(ROOT / 'artifacts/research-shadow-v2/launchd.err.log'),
         'EnvironmentVariables': {'PYTHONUNBUFFERED': '1', 'OMP_NUM_THREADS': '1',
                                  'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1'},
     }
-    (ROOT / 'artifacts/research-shadow-v1').mkdir(parents=True, exist_ok=True)
+    (ROOT / 'artifacts/research-shadow-v2').mkdir(parents=True, exist_ok=True)
     DEST.parent.mkdir(parents=True, exist_ok=True)
     DEST.write_bytes(plistlib.dumps(payload))
     print(DEST)

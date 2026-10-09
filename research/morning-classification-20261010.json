@@ -1,0 +1,316 @@
+{
+  "version": "morning-classification-research-v2",
+  "status": "research_only_not_deployed",
+  "data_asof": "2026-10-09",
+  "selection_date": "2026-09-28",
+  "training_target": "gross_return_strictly_above_1pct",
+  "training_models": [
+    "logistic",
+    "lightgbm"
+  ],
+  "official_signal_unchanged": "frozen_24_formula",
+  "validation": {
+    "research_environment_unittest_count": 88,
+    "selection_date_onward_mature_evaluation_days": 3,
+    "metadata_correction_after_first_freeze": "formula baseline score marked non-probability; first frozen files preserved"
+  },
+  "tracks": {
+    "core": {
+      "historical_report_sha256": "8fbdb706a1c5c79e469b99bc497f8283c41d370e7c7c01b9488260b3dc8c6920",
+      "historical_report_version": "morning-model-classification-v1-core",
+      "data_hash": "0331cd7565a1be7079b276690b84c2a08c0e335e16b5b166d89b0e2c831e907c",
+      "research_code_hash": "8bf0bac946ab3f98e9cc7379489b49a82d8f39d0ac9870cd86de7b113cd6df98",
+      "post_selection_period": [
+        "2026-09-28",
+        "2026-10-09"
+      ],
+      "post_selection_metrics": {
+        "logistic": {
+          "evaluated_days": 3,
+          "coverage": 0.9893617021276596,
+          "top4_mean_daily_gross_return": -0.0044497825860438656,
+          "gt_1pct": {
+            "mean_daily_auc": 0.48321188000883364,
+            "auc_days": 3,
+            "pooled_base_rate": 0.2549746526592584,
+            "top10_hit_rate": 0.27586206896551724,
+            "top10_hits": 8,
+            "top10_observed": 29
+          },
+          "gt_3pct": {
+            "mean_daily_auc": 0.6422900720455068,
+            "auc_days": 3,
+            "pooled_base_rate": 0.05394659369915325,
+            "top10_hit_rate": 0.13793103448275862,
+            "top10_hits": 4,
+            "top10_observed": 29
+          },
+          "gt_5pct": {
+            "mean_daily_auc": 0.6802895853083598,
+            "auc_days": 3,
+            "pooled_base_rate": 0.01971628511463141,
+            "top10_hit_rate": 0.06896551724137931,
+            "top10_hits": 2,
+            "top10_observed": 29
+          }
+        },
+        "lightgbm": {
+          "evaluated_days": 3,
+          "coverage": 0.9893617021276596,
+          "top4_mean_daily_gross_return": 0.0011521426277049478,
+          "gt_1pct": {
+            "mean_daily_auc": 0.4846801201322543,
+            "auc_days": 3,
+            "pooled_base_rate": 0.2549746526592584,
+            "top10_hit_rate": 0.26666666666666666,
+            "top10_hits": 8,
+            "top10_observed": 30
+          },
+          "gt_3pct": {
+            "mean_daily_auc": 0.6202443691574127,
+            "auc_days": 3,
+            "pooled_base_rate": 0.05394659369915325,
+            "top10_hit_rate": 0.1,
+            "top10_hits": 3,
+            "top10_observed": 30
+          },
+          "gt_5pct": {
+            "mean_daily_auc": 0.6660891957072926,
+            "auc_days": 3,
+            "pooled_base_rate": 0.01971628511463141,
+            "top10_hit_rate": 0.03333333333333333,
+            "top10_hits": 1,
+            "top10_observed": 30
+          }
+        },
+        "frozen_24_formula": {
+          "evaluated_days": 3,
+          "coverage": 0.9893617021276596,
+          "top4_mean_daily_gross_return": -0.02870887326117802,
+          "gt_1pct": {
+            "mean_daily_auc": 0.5365597625313494,
+            "auc_days": 3,
+            "pooled_base_rate": 0.2549746526592584,
+            "top10_hit_rate": 0.4666666666666667,
+            "top10_hits": 14,
+            "top10_observed": 30
+          },
+          "gt_3pct": {
+            "mean_daily_auc": 0.5501892632327414,
+            "auc_days": 3,
+            "pooled_base_rate": 0.05394659369915325,
+            "top10_hit_rate": 0.23333333333333334,
+            "top10_hits": 7,
+            "top10_observed": 30
+          },
+          "gt_5pct": {
+            "mean_daily_auc": 0.5467637479039622,
+            "auc_days": 3,
+            "pooled_base_rate": 0.01971628511463141,
+            "top10_hit_rate": 0.1,
+            "top10_hits": 3,
+            "top10_observed": 30
+          }
+        }
+      },
+      "net_backtest": {
+        "logistic": {
+          "status": "blocked",
+          "error_type": "ValidationError",
+          "reason": "持仓出现公司行动，当前回测需公司行动适配器: 000700.SZ 2026-09-30"
+        },
+        "lightgbm": {
+          "status": "complete",
+          "metrics": {
+            "total_return": -0.024884000000000017,
+            "annualized_return": -0.719174436085013,
+            "max_drawdown": -0.028372048942782224,
+            "sharpe_zero_rate": -8.327316937431053,
+            "trade_count": 21,
+            "fees_paid": 112.84
+          },
+          "unfilled_count": 4
+        },
+        "frozen_24_formula": {
+          "status": "complete",
+          "metrics": {
+            "total_return": 0.01692300000000002,
+            "annualized_return": 1.3298004647854706,
+            "max_drawdown": -0.00228794560733081,
+            "sharpe_zero_rate": 8.892781245031772,
+            "trade_count": 20,
+            "fees_paid": 107.77
+          },
+          "unfilled_count": 6
+        }
+      },
+      "v2_shadow": {
+        "path": "artifacts/research-shadow-v2/core/predictions/2026-10-09.json",
+        "sha256": "58b220c0080f251fbd55976470ed631346cf0cad5ad5813ff17291e8947cac98",
+        "provenance": "prospective",
+        "created_at": "2026-10-10T01:35:41.360871+08:00",
+        "signal_date": "2026-10-09",
+        "score_count": 564,
+        "train_signal_range": [
+          "2026-03-31",
+          "2026-09-30"
+        ],
+        "train_positive_rate": 0.28933685646096147,
+        "frozen_research_code_hash": "0f29aa2709d5d333dee5a1c12fda359a9579345039b386fd372f5235171785be"
+      },
+      "v1_shadow_preserved": {
+        "path": "artifacts/research-shadow-v1/core/predictions/2026-10-09.json",
+        "sha256": "28c9b7046b581e6882cd62e9a2a8bf36e9bfba380cc8bc725e91f31548cc68a4",
+        "provenance": "prospective"
+      }
+    },
+    "minute": {
+      "historical_report_sha256": "ef0c5bd2d3ba690a8c9c55c760e58aca7a79279a0fa716e6a9fcc35734444b94",
+      "historical_report_version": "morning-model-classification-v1-minute",
+      "data_hash": "0331cd7565a1be7079b276690b84c2a08c0e335e16b5b166d89b0e2c831e907c",
+      "research_code_hash": "8bf0bac946ab3f98e9cc7379489b49a82d8f39d0ac9870cd86de7b113cd6df98",
+      "post_selection_period": [
+        "2026-09-28",
+        "2026-10-09"
+      ],
+      "post_selection_metrics": {
+        "logistic": {
+          "evaluated_days": 3,
+          "coverage": 0.9893617021276596,
+          "top4_mean_daily_gross_return": -0.0012986620974384429,
+          "gt_1pct": {
+            "mean_daily_auc": 0.49316143495459724,
+            "auc_days": 3,
+            "pooled_base_rate": 0.2549746526592584,
+            "top10_hit_rate": 0.3448275862068966,
+            "top10_hits": 10,
+            "top10_observed": 29
+          },
+          "gt_3pct": {
+            "mean_daily_auc": 0.660939558629776,
+            "auc_days": 3,
+            "pooled_base_rate": 0.05394659369915325,
+            "top10_hit_rate": 0.1724137931034483,
+            "top10_hits": 5,
+            "top10_observed": 29
+          },
+          "gt_5pct": {
+            "mean_daily_auc": 0.6756332254958503,
+            "auc_days": 3,
+            "pooled_base_rate": 0.01971628511463141,
+            "top10_hit_rate": 0.10344827586206896,
+            "top10_hits": 3,
+            "top10_observed": 29
+          }
+        },
+        "lightgbm": {
+          "evaluated_days": 3,
+          "coverage": 0.9893617021276596,
+          "top4_mean_daily_gross_return": -0.0019200151372867162,
+          "gt_1pct": {
+            "mean_daily_auc": 0.49948990541022775,
+            "auc_days": 3,
+            "pooled_base_rate": 0.2549746526592584,
+            "top10_hit_rate": 0.43333333333333335,
+            "top10_hits": 13,
+            "top10_observed": 30
+          },
+          "gt_3pct": {
+            "mean_daily_auc": 0.6409567988372337,
+            "auc_days": 3,
+            "pooled_base_rate": 0.05394659369915325,
+            "top10_hit_rate": 0.16666666666666666,
+            "top10_hits": 5,
+            "top10_observed": 30
+          },
+          "gt_5pct": {
+            "mean_daily_auc": 0.6898002820111072,
+            "auc_days": 3,
+            "pooled_base_rate": 0.01971628511463141,
+            "top10_hit_rate": 0.06666666666666667,
+            "top10_hits": 2,
+            "top10_observed": 30
+          }
+        },
+        "frozen_24_formula": {
+          "evaluated_days": 3,
+          "coverage": 0.9893617021276596,
+          "top4_mean_daily_gross_return": -0.02870887326117802,
+          "gt_1pct": {
+            "mean_daily_auc": 0.5365597625313494,
+            "auc_days": 3,
+            "pooled_base_rate": 0.2549746526592584,
+            "top10_hit_rate": 0.4666666666666667,
+            "top10_hits": 14,
+            "top10_observed": 30
+          },
+          "gt_3pct": {
+            "mean_daily_auc": 0.5501892632327414,
+            "auc_days": 3,
+            "pooled_base_rate": 0.05394659369915325,
+            "top10_hit_rate": 0.23333333333333334,
+            "top10_hits": 7,
+            "top10_observed": 30
+          },
+          "gt_5pct": {
+            "mean_daily_auc": 0.5467637479039622,
+            "auc_days": 3,
+            "pooled_base_rate": 0.01971628511463141,
+            "top10_hit_rate": 0.1,
+            "top10_hits": 3,
+            "top10_observed": 30
+          }
+        }
+      },
+      "net_backtest": {
+        "logistic": {
+          "status": "blocked",
+          "error_type": "ValidationError",
+          "reason": "持仓出现公司行动，当前回测需公司行动适配器: 000700.SZ 2026-09-30"
+        },
+        "lightgbm": {
+          "status": "blocked",
+          "error_type": "ValidationError",
+          "reason": "持仓出现公司行动，当前回测需公司行动适配器: 000700.SZ 2026-09-30"
+        },
+        "frozen_24_formula": {
+          "status": "complete",
+          "metrics": {
+            "total_return": 0.01692300000000002,
+            "annualized_return": 1.3298004647854706,
+            "max_drawdown": -0.00228794560733081,
+            "sharpe_zero_rate": 8.892781245031772,
+            "trade_count": 20,
+            "fees_paid": 107.77
+          },
+          "unfilled_count": 6
+        }
+      },
+      "v2_shadow": {
+        "path": "artifacts/research-shadow-v2/minute/predictions/2026-10-09.json",
+        "sha256": "3fc8fd52371d2fa8040465c1e6d47e67b8648a9721e0577bba0f194e9e1e1fd0",
+        "provenance": "prospective",
+        "created_at": "2026-10-10T01:36:09.976072+08:00",
+        "signal_date": "2026-10-09",
+        "score_count": 564,
+        "train_signal_range": [
+          "2026-03-31",
+          "2026-09-30"
+        ],
+        "train_positive_rate": 0.28933685646096147,
+        "frozen_research_code_hash": "0f29aa2709d5d333dee5a1c12fda359a9579345039b386fd372f5235171785be"
+      },
+      "v1_shadow_preserved": {
+        "path": "artifacts/research-shadow-v1/minute/predictions/2026-10-09.json",
+        "sha256": "6c8a7b04b742464c210f50394440ec75dbe2954343a7b29279c2b584f736078c",
+        "provenance": "prospective"
+      }
+    }
+  },
+  "limitations": [
+    "selected 188 stocks have hindsight selection bias before 2026-09-28",
+    "only three mature post-selection replay dates and no mature V2 prospective labels",
+    "corporate actions block some fee-inclusive account backtests",
+    "predicted class probabilities are not independently calibrated"
+  ]
+}
