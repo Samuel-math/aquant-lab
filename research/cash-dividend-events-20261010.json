@@ -1,0 +1,18 @@
+{
+  "version": "research-cash-events-v1",
+  "data_asof": "2026-10-09",
+  "query": "BaoStock 0.9.4 query_dividend_data(code='sz.000700', year='2026', yearType='operate')",
+  "completeness": "one verified event only; not a complete 188-stock corporate-action database",
+  "events": [
+    {
+      "symbol": "000700.SZ",
+      "record_date": "2026-09-29",
+      "ex_date": "2026-09-30",
+      "pay_date": "2026-09-30",
+      "announcement_date": "2026-09-22",
+      "cash_before_tax_per_share": 0.1634,
+      "shares_per_share": 0,
+      "source": "BaoStock query_dividend_data; 2026-09-30 official dividend record"
+    }
+  ]
+}

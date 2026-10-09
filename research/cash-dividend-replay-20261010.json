@@ -1,0 +1,154 @@
+{
+  "version": "research-cash-dividend-replay-v1",
+  "status": "research_only_not_deployed",
+  "data_asof": "2026-10-09",
+  "data_hash": "0331cd7565a1be7079b276690b84c2a08c0e335e16b5b166d89b0e2c831e907c",
+  "period": [
+    "2026-09-28",
+    "2026-10-09"
+  ],
+  "event_fixture_sha256": "fa418a5fdba6c2fa578d1fde6a2a9ad3042a83b15c21665bc631d752fca1782c",
+  "replay_code_sha256": "830c8725a52526e8d0a0544facff36f2caa75eba7c3ca172bb2aeb1d7bdf9fb7",
+  "script_sha256": "0c757ce6de9413bf219e7ec137f23d462059d37d64f902b604e8bd31fe24c804",
+  "validation": {
+    "research_environment_unittest_count": 91,
+    "no_action_trade_and_curve_equivalent_to_frozen_backtest": true,
+    "unsupported_actions_still_block": true
+  },
+  "tracks": {
+    "core": {
+      "replay_sha256": "2ccca6ef7f8adf4793fb289c86817001edf10a5b5a1c5a2d583ffe63a1098046",
+      "models": {
+        "frozen_24_formula": {
+          "old_status": "complete",
+          "new_status": "complete",
+          "metrics": {
+            "total_return": 0.01692300000000002,
+            "max_drawdown": -0.00228794560733081,
+            "sharpe_zero_rate": 8.892781245031772,
+            "trade_count": 20,
+            "fees_paid": 107.77,
+            "pretax_cash_dividends": 0
+          },
+          "dividends": [],
+          "unfilled_count": 6
+        },
+        "lightgbm": {
+          "old_status": "complete",
+          "new_status": "complete",
+          "metrics": {
+            "total_return": -0.024884000000000017,
+            "max_drawdown": -0.028372048942782224,
+            "sharpe_zero_rate": -8.327316937431053,
+            "trade_count": 21,
+            "fees_paid": 112.84,
+            "pretax_cash_dividends": 0
+          },
+          "dividends": [],
+          "unfilled_count": 4
+        },
+        "logistic": {
+          "old_status": "blocked",
+          "new_status": "complete",
+          "metrics": {
+            "total_return": -0.013665999999999956,
+            "max_drawdown": -0.022912000000000043,
+            "sharpe_zero_rate": -4.146103922958478,
+            "trade_count": 24,
+            "fees_paid": 129.0,
+            "pretax_cash_dividends": 16.34
+          },
+          "dividends": [
+            {
+              "kind": "DIVIDEND",
+              "date": "2026-09-30",
+              "symbol": "000700.SZ",
+              "qty_at_record_close": 100,
+              "cash_before_tax_per_share": 0.1634,
+              "amount": 16.34,
+              "source": "BaoStock query_dividend_data; 2026-09-30 official dividend record",
+              "tax_status": "pretax_research_scenario"
+            }
+          ],
+          "unfilled_count": 3
+        }
+      }
+    },
+    "minute": {
+      "replay_sha256": "982a54b2144f2048fa70dde3a7a72db7ad8ac0ac1aa7b85096abfd956de39e07",
+      "models": {
+        "frozen_24_formula": {
+          "old_status": "complete",
+          "new_status": "complete",
+          "metrics": {
+            "total_return": 0.01692300000000002,
+            "max_drawdown": -0.00228794560733081,
+            "sharpe_zero_rate": 8.892781245031772,
+            "trade_count": 20,
+            "fees_paid": 107.77,
+            "pretax_cash_dividends": 0
+          },
+          "dividends": [],
+          "unfilled_count": 6
+        },
+        "lightgbm": {
+          "old_status": "blocked",
+          "new_status": "complete",
+          "metrics": {
+            "total_return": -0.02763300000000002,
+            "max_drawdown": -0.02763300000000002,
+            "sharpe_zero_rate": -14.665603115887317,
+            "trade_count": 17,
+            "fees_paid": 91.67,
+            "pretax_cash_dividends": 16.34
+          },
+          "dividends": [
+            {
+              "kind": "DIVIDEND",
+              "date": "2026-09-30",
+              "symbol": "000700.SZ",
+              "qty_at_record_close": 100,
+              "cash_before_tax_per_share": 0.1634,
+              "amount": 16.34,
+              "source": "BaoStock query_dividend_data; 2026-09-30 official dividend record",
+              "tax_status": "pretax_research_scenario"
+            }
+          ],
+          "unfilled_count": 7
+        },
+        "logistic": {
+          "old_status": "blocked",
+          "new_status": "complete",
+          "metrics": {
+            "total_return": -0.009696999999999956,
+            "max_drawdown": -0.02106536788277713,
+            "sharpe_zero_rate": -2.939658533460072,
+            "trade_count": 24,
+            "fees_paid": 129.31,
+            "pretax_cash_dividends": 16.34
+          },
+          "dividends": [
+            {
+              "kind": "DIVIDEND",
+              "date": "2026-09-30",
+              "symbol": "000700.SZ",
+              "qty_at_record_close": 100,
+              "cash_before_tax_per_share": 0.1634,
+              "amount": 16.34,
+              "source": "BaoStock query_dividend_data; 2026-09-30 official dividend record",
+              "tax_status": "pretax_research_scenario"
+            }
+          ],
+          "unfilled_count": 3
+        }
+      }
+    }
+  },
+  "limitations": [
+    "historical predictions were generated after their dates, not prospective",
+    "only three mature post-selection evaluation days",
+    "pretax dividend scenario; personal investor tax is unknown",
+    "event fixture contains one verified action and is not a complete event database",
+    "09:30 open and 09:40 five-minute close proxy execution, not guaranteed fills"
+  ]
+}
