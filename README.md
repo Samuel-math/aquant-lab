@@ -116,9 +116,11 @@ asof应使用 sync 输出的实际最新交易日。sync只长期保存日线、
 
 本机重新下载真实行情并启动独立V3模拟试验的步骤见[本机早盘模拟试验](docs/LOCAL_MORNING.md)；其状态与启用证据见[版本记录](docs/SELECTION_CHANGELOG.md)。
 
-待启用的新模型/执行V3采用**09:30卖旧仓、09:40买新仓**，188只底池保持V2.1。开盘价为09:30成交代理，计划截止09:00；[配置](configs/paper-pool188-morning-v1.json)及[版本与启用记录](docs/SELECTION_CHANGELOG.md)。截至2026-10-07服务器连接被拒，尚未核验补数和新计划，不应使用旧计划交易。旧10:00试验单独保留，不能合并比较收益。
+本机V3试验已于2026-10-09独立启用，采用**09:30卖旧仓、09:40买新仓**，188只底池保持V2.1。开盘价为09:30成交代理，计划截止09:00；[本机配置](configs/paper-pool188-morning-local-v1.json)及[版本与启用记录](docs/SELECTION_CHANGELOG.md)。旧服务器V3未验收，旧10:00试验单独保留，不能合并比较收益。
 
-详见[模拟组合与通知配置](docs/PAPER.md)。服务器worker顺序生成真实行情、滚动训练结果和模拟账本；本地巡检通过Gmail插件发送日报，服务器SMTP当前禁用。模拟与实际账户分离。188只V2.1独立试验的启用状态和切换证据见[版本记录](docs/SELECTION_CHANGELOG.md)。
+详见[模拟组合与通知配置](docs/PAPER.md)。本机worker顺序生成真实行情、滚动训练结果和模拟账本；本地巡检通过Gmail插件发送日报，SMTP当前禁用。模拟与实际账户分离。188只V2.1独立试验的启用状态和切换证据见[版本记录](docs/SELECTION_CHANGELOG.md)。
+
+更丰富的分钟量价特征、Ridge和LightGBM目前仅在[独立模型研究](docs/MODEL_RESEARCH_V1.md)中比较，尚未改变每日模拟信号。
 
 ## 188只研究底池
 

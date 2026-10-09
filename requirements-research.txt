@@ -1,0 +1,5 @@
+# Isolated research environment. Keep the running paper-trial venv unchanged.
+-r requirements-data.txt
+scipy==1.15.3
+scikit-learn==1.7.2
+lightgbm==4.7.0
